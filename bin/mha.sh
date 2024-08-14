@@ -610,7 +610,7 @@ main_leader() {
 
             if [[ -z "$promote_follower_name" ]]; then
                 set_global_status "failure"
-                break
+                continue
             fi
 
             log_stdout "promote follower name: ${promote_follower_name}"
@@ -707,8 +707,6 @@ Options:
 
     --follower-replica VALUE    Specify the follower replica.
         --replica-dsn VALUE         Specify the replica DSN.
-        --host-interface VALUE
-        --host-vip VALUE
 
     --leader
         --follower-pings
@@ -717,7 +715,6 @@ Options:
 
     --monitor
     
-
     --help                      Display this help message and exit.
 
 Description:
