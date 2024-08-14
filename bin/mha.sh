@@ -189,6 +189,11 @@ compare_gtidsets() {
 }
 
 elect_new_source_from_replicas() {
+    if [[ $(get_replicas_followers | wc -l) -eq 1 ]]; then
+        get_replicas_followers
+        return
+    fi
+
     local replica_follower_name_newest=""
     local replica_gtidsets_newest=""
     for replica_follower_name in $(redis_get hkeys mha:mysql:gtidsets | n_grep -E '^fr[0-9]+$'); do
@@ -602,6 +607,12 @@ main_leader() {
 
         if check_global_status "failover-promote-replica"; then
             promote_follower_name=$(elect_new_source_from_replicas)
+
+            if [[ -z "$promote_follower_name" ]]; then
+                set_global_status "failure"
+                break
+            fi
+
             log_stdout "promote follower name: ${promote_follower_name}"
             redis_set hset mha:failover promote:follonwer "$promote_follower_name"
 
