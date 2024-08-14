@@ -714,7 +714,7 @@ Options:
         --follower-source
 
     --monitor
-    
+
     --help                      Display this help message and exit.
 
 Description:
