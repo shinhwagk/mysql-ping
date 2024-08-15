@@ -89,8 +89,8 @@ get_replicas_followers() {
     get_followners | n_grep -E '^fr[0-9]+$' | sort -t 'r' -k2,2n
 }
 
-get_source_dsn_by_follower_name() {
-    redis_get hget mha:mysql:dsn fs1
+get_mysql_dsn_by_follower_name() {
+    redis_get hget mha:mysql:dsn "$1"
 }
 
 push_follower_liveness() {
@@ -216,6 +216,37 @@ elect_new_source_from_replicas() {
         fi
     done
     echo "$replica_follower_name_newest"
+}
+
+exposes_replicas_info() {
+    local replicas=""
+    for follonwer_name in $(get_replicas_followers); do
+        local var_n="MHA_REPLICA_STATUS_LOGFILE_${follonwer_name}"
+        local var_v="$(redis_get hget mha:replica:status:logfile "$follonwer_name")"
+        export "$var_n"="$var_v"
+
+        var_n="MHA_REPLICA_STATUS_LOGPOS_${follonwer_name}"
+        var_v="$(redis_get hget mha:replica:status:logpos "$follonwer_name")"
+        export "$var_n"="$var_v"
+
+        var_n="MHA_REPLICA_GTIDSETS_${follonwer_name}"
+        var_v="$(redis_get hget mha:mysql:gtidsets "$follonwer_name")"
+        export "$var_n"="$var_v"
+
+        local mysql_dsn=$(get_mysql_dsn_by_follower_name "$follonwer_name")
+        var_n="MHA_REPLICA_LIVE_${follonwer_name}"
+        if check_mysql_live "$mysql_dsn"; then
+            var_v=1
+        else
+            var_v=0
+        fi
+        export "$var_n"="$var_v"
+        if [[ -n "$replicas" ]]; then
+            replicas+=","
+        fi
+        replicas+="$follonwer_name"
+        export MHA_REPLICAS="$replicas"
+    done
 }
 
 check_mysql_live() {
@@ -344,7 +375,7 @@ main_follower_ping() {
 
         if check_global_status "monitor"; then
             if [[ -z $source_dsn ]]; then
-                source_dsn=$(get_source_dsn_by_follower_name)
+                source_dsn=$(get_mysql_dsn_by_follower_name fs1)
             fi
             follower_ping__push_source_liveness "${source_dsn}"
         fi
@@ -606,7 +637,8 @@ main_leader() {
         fi
 
         if check_global_status "failover-promote-replica"; then
-            promote_follower_name=$(elect_new_source_from_replicas)
+            exposes_replicas_info
+            promote_follower_name=$(custom_elect_new_source_from_replicas)
 
             if [[ -z "$promote_follower_name" ]]; then
                 set_global_status "failure"
@@ -654,7 +686,7 @@ main_leader() {
                             elif [[ "$repoint_status" == 0 ]]; then
                                 ((failure_count++))
                             fi
-                            log_stderr "repoint complate."
+                            log_stdout "repoint complate."
                             break
                         fi
                     else

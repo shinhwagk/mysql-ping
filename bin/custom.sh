@@ -106,6 +106,62 @@ custom_failover_repoint_mysql_replica() {
     mysql -h"${1}" -P"${2}" -u"${3}" -p"${4}" -v -e "STOP SLAVE; CHANGE REPLICATION SOURCE TO SOURCE_HOST='${5}', SOURCE_PORT=${6}, MASTER_AUTO_POSITION=1; START SLAVE;" >"$TEMP_DIR/custom_failover_repoint_mysql_replica.out.log" 2>"$TEMP_DIR/custom_failover_repoint_mysql_replica.err.log"
 }
 
+# envs:
+#   MHA_REPLICA_STATUS_LOGFILE_fr*
+#   MHA_REPLICA_STATUS_LOGPOS_fr*
+#   MHA_REPLICA_GTIDSETS_fr*
+#   MHA_REPLICA_LIVE_fr*
+#   MHA_REPLICAS fr1,fr2,fr3
+custom_elect_new_source_from_replicas() {
+    local fn_newest=""
+    for fn in ${MHA_REPLICAS//,/ }; do
+        vn="MHA_REPLICA_LIVE_${fn}"
+
+        if [[ ${!vn} == 0 ]]; then
+            continue
+        fi
+
+        if [[ -z "$fn_newest" ]]; then
+            fn_newest=$fn
+        fi
+
+        vn_cur="MHA_REPLICA_STATUS_LOGFILE_${fn}"
+        local logfile_cur=${!vn_cur}
+        local logfile_cur_n="${logfile_cur//[^0-9]/}"
+
+        vn_new="MHA_REPLICA_STATUS_LOGFILE_${fn_newest}"
+        local logfile_new=${!vn_new}
+        local logfile_new_n="${logfile_new//[^0-9]/}"
+
+        if ((logfile_cur_n > logfile_new_n)); then
+            fn_newest=$fn
+        elif ((logfile_cur_n < logfile_new_n)); then
+            :
+        else
+            vn_cur="MHA_REPLICA_STATUS_LOGPOS_${fn}"
+            local logpos_cur=${!vn_cur}
+            local logpos_cur_n="${logpos_cur//[^0-9]/}"
+
+            vn_new="MHA_REPLICA_STATUS_LOGPOS_${fn_newest}"
+            local logpos_new=${!vn_new}
+            local logpos_new_n="${logpos_new//[^0-9]/}"
+
+            if ((logpos_cur_n > logpos_new_n)); then
+                fn_newest=$fn
+            elif ((logfile_cur_n < logfile_new_n)); then
+                :
+            else
+                :
+            fi
+        fi
+    done
+    if [[ -z $fn_newest ]]; then
+        return 1
+    else
+        echo "$fn_newest"
+    fi
+}
+
 # return:
 #   $?: 0:ok, 1:err
 custom_failover_post() {
