@@ -218,7 +218,7 @@ elect_new_source_from_replicas() {
     echo "$replica_follower_name_newest"
 }
 
-exposes_replicas_info() {
+export_custom_elect_source_script_env_vars() {
     local replicas=""
     for follonwer_name in $(get_replicas_followers); do
         local var_n="MHA_REPLICA_STATUS_LOGFILE_${follonwer_name}"
@@ -637,7 +637,7 @@ main_leader() {
         fi
 
         if check_global_status "failover-promote-replica"; then
-            exposes_replicas_info
+            export_custom_elect_source_script_env_vars
             promote_follower_name=$(custom_elect_new_source_from_replicas)
 
             if [[ -z "$promote_follower_name" ]]; then
