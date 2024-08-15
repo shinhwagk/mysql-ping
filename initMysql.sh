@@ -5,12 +5,14 @@ mysql -uroot -proot_password -hdb1 -se"grant replication slave, replication clie
 
 set -e
 
-mysql -uroot -proot_password -hdb1 -se"drop database if exists test;"
-mysql -uroot -proot_password -hdb2 -se"drop database if exists test;"
-mysql -uroot -proot_password -hdb3 -se"drop database if exists test;"
+mysql -uroot -proot_password -hdb1 -se"set global super_read_only=0;drop database if exists test;"
+mysql -uroot -proot_password -hdb2 -se"set global super_read_only=0;drop database if exists test;"
+mysql -uroot -proot_password -hdb3 -se"set global super_read_only=0;drop database if exists test;"
 
 mysql -uroot -proot_password -hdb1 -se"reset master;"
 
+mysql -uroot -proot_password -hdb2 -se"set global read_only=1;"
+mysql -uroot -proot_password -hdb2 -se"set global super_read_only=1;"
 mysql -uroot -proot_password -hdb2 -se"stop slave;"
 mysql -uroot -proot_password -hdb2 -se"reset slave all;"
 mysql -uroot -proot_password -hdb2 -se"reset master;"
@@ -18,6 +20,8 @@ mysql -uroot -proot_password -hdb2 -se"change master to master_host='db1', maste
 mysql -uroot -proot_password -hdb2 -se"start slave;"
 mysql -uroot -proot_password -hdb2 -se"show slave status\G"
 
+mysql -uroot -proot_password -hdb3 -se"set global read_only=1;"
+mysql -uroot -proot_password -hdb3 -se"set global super_read_only=1;"
 mysql -uroot -proot_password -hdb3 -se"stop slave;"
 mysql -uroot -proot_password -hdb3 -se"reset slave all;"
 mysql -uroot -proot_password -hdb3 -se"reset master;"

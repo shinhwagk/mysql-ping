@@ -169,6 +169,11 @@ follower_leader__check_source_liveness() {
     wait
     log_stdout "wait all ping source liveness done."
 
+    for ping_follower_name in $(get_ping_followners); do
+        redis_set hdel mha:source:liveness "${ping_follower_name}-fs1" &
+    done
+    wait
+
     for tmp_file in "${TEMP_DIR}"/source_liveness_fp*-fs1; do
         local status=$(cat "${tmp_file}")
         if [[ -z $status ]]; then
@@ -218,7 +223,7 @@ elect_new_source_from_replicas() {
     echo "$replica_follower_name_newest"
 }
 
-export_custom_elect_source_script_env_vars() {
+export_custom_script_env_vars__elect_source() {
     local replicas=""
     for follonwer_name in $(get_replicas_followers); do
         local var_n="MHA_REPLICA_STATUS_LOGFILE_${follonwer_name}"
@@ -332,8 +337,7 @@ follower_ping__push_source_liveness_running() {
     else
         log_stdout "source down."
     fi
-    redis_set hset mha:source:liveness "${follower_key}" $status
-    touch "$done_file"
+    redis_set hset mha:source:liveness "${follower_key}" $status && touch "$done_file"
 }
 
 follower_ping__push_source_liveness() {
@@ -343,9 +347,12 @@ follower_ping__push_source_liveness() {
     local running_file="${TEMP_DIR}/source.liveness.${GLB_FOLLOWER_NAME}.running"
     local done_file="${TEMP_DIR}/source.liveness.${GLB_FOLLOWER_NAME}.done"
 
-    if [[ -f "$done_file" ]] || [[ ! -f "$done_file" && ! -f "$running_file" ]]; then
-        local source_liveness_status=$(redis_get hget mha:source:liveness "${follower_key}")
-        [[ -z "${source_liveness_status}" ]] && rm -f "$running_file"
+    if [[ -f "$done_file" ]]; then
+        if [[ -z "$(redis_get hget mha:source:liveness "${follower_key}")" ]]; then
+            rm -f "$running_file" "$done_file"
+        else
+            return
+        fi
     fi
 
     if [[ -f "$running_file" ]]; then
@@ -353,44 +360,8 @@ follower_ping__push_source_liveness() {
         return
     fi
 
-    redis_set hdel mha:source:liveness "$follower_key"
-    log_stdout "clear mha:source:liveness '$follower_key'."
-
-    touch "$running_file"
+    touch "$running_file" && rm -f "$done_file"
     follower_ping__push_source_liveness_running "$done_file" "$follower_key" "$source_dsn" &
-}
-
-main_follower_ping() {
-    log_stdout "ready."
-
-    local source_dsn=""
-
-    while true; do
-        if check_global_status "setup"; then
-            source_dsn=""
-            log_stdout "setup complate"
-        fi
-
-        push_follower_liveness
-
-        if check_global_status "monitor"; then
-            if [[ -z $source_dsn ]]; then
-                source_dsn=$(get_mysql_dsn_by_follower_name fs1)
-            fi
-            follower_ping__push_source_liveness "${source_dsn}"
-        fi
-
-        if check_global_status "done"; then
-            log_stdout "failover success."
-            exit 0
-        fi
-
-        if check_global_status "failure"; then
-            log_stdout "failover failure."
-            exit 1
-        fi
-        sleep 1
-    done
 }
 
 push_mysql_gtidsets() {
@@ -449,8 +420,7 @@ follower_replica__promote_running() {
     if custom_failover_promote_mysql_replica "${MYSQL_HOST}" "${MYSQL_PORT}" "${MYSQL_USER}" "${MYSQL_PASS}"; then
         status=1
     fi
-    redis_set hset mha:failover promote $status
-    touch "$done_file"
+    redis_set hset mha:failover promote $status && touch "$done_file"
 }
 
 follower_replica__promote() {
@@ -464,10 +434,8 @@ follower_replica__promote() {
 
     if [[ $(redis_get hget mha:failover promote:follonwer) != "$GLB_FOLLOWER_NAME" ]]; then
         touch "$exclude_file"
+        return
     fi
-
-    redis_set hdel mha:failover promote
-    log_stdout "clear mha:failover promote."
 
     touch "$running_file"
     follower_replica__promote_running "$done_file" &
@@ -479,7 +447,7 @@ follonwer_replica__repoint_running() {
 
     local promote_follower_name=$(redis_get hget mha:failover promote:follonwer)
 
-    local promote_mysql_dsn=$(redis_get hget mha:mysql:dsn "$promote_follower_name")
+    local promote_mysql_dsn=$(get_mysql_dsn_by_follower_name "$promote_follower_name")
 
     read -r MYSQL_SOURCE_HOST MYSQL_SOURCE_PORT _ _ <<<"$(parse_mysql_dsn "$promote_mysql_dsn")"
     read -r MYSQL_HOST MYSQL_PORT MYSQL_USER MYSQL_PASS <<<"$(parse_mysql_dsn "$GLB_MYSQL_REPLICA_DSN")"
@@ -487,8 +455,7 @@ follonwer_replica__repoint_running() {
     if custom_failover_repoint_mysql_replica "${MYSQL_HOST}" "${MYSQL_PORT}" "${MYSQL_USER}" "${MYSQL_PASS}" "${MYSQL_SOURCE_HOST}" "${MYSQL_SOURCE_PORT}"; then
         status=1
     fi
-    redis_set hset mha:failover "repoint:${GLB_FOLLOWER_NAME}" $status
-    touch "$done_file"
+    redis_set hset mha:failover "repoint:${GLB_FOLLOWER_NAME}" $status && touch "$done_file"
 }
 
 follonwer_replica__repoint() {
@@ -505,19 +472,46 @@ follonwer_replica__repoint() {
         return
     fi
 
-    redis_set hdel mha:failover "repoint:${GLB_FOLLOWER_NAME}"
-    log_stdout "clear mha:failover repoint:${GLB_FOLLOWER_NAME}."
-
     touch "$running_file"
     follonwer_replica__repoint_running "$done_file" &
+}
+
+main_follower_ping() {
+    log_stdout "ready."
+
+    local source_dsn=""
+
+    while true; do
+        if check_global_status "setup"; then
+            source_dsn=""
+            log_stdout "setup complate"
+        fi
+
+        push_follower_liveness
+
+        if check_global_status "monitor"; then
+            if [[ -z $source_dsn ]]; then
+                source_dsn=$(get_mysql_dsn_by_follower_name fs1)
+            fi
+            follower_ping__push_source_liveness "${source_dsn}"
+        fi
+
+        if check_global_status "done"; then
+            log_stdout "failover success."
+            exit 0
+        fi
+
+        if check_global_status "failure"; then
+            log_stdout "failover failure."
+            exit 1
+        fi
+        sleep 1
+    done
 }
 
 main_follower_replica() {
     log_stdout "temp dir: ${TEMP_DIR}."
     log_stdout "ready."
-
-    # check replica running ok.
-    register_mysql_dsn "${GLB_MYSQL_REPLICA_DSN}"
 
     while true; do
         if check_global_status "setup"; then
@@ -554,8 +548,6 @@ main_follower_replica() {
 
 main_follower_source() {
     log_stdout "ready."
-
-    register_mysql_dsn "${GLB_MYSQL_SOURCE_DSN}"
 
     while true; do
         redis_get get mha:global:status
@@ -594,16 +586,13 @@ main_leader() {
 
     while true; do
         if check_global_status "setup"; then
+            redis_set del '*'
             leader__wait_all_followers_ready
             set_global_status "monitor"
         fi
 
         if check_global_status "monitor"; then
-            if follower_leader__check_source_liveness; then
-                for ping_follower_name in $(get_ping_followners); do
-                    redis_set hdel mha:source:liveness "${ping_follower_name}-fs1"
-                done
-            else
+            if ! follower_leader__check_source_liveness; then
                 set_global_status "failover-pre"
             fi
         fi
@@ -637,7 +626,7 @@ main_leader() {
         fi
 
         if check_global_status "failover-promote-replica"; then
-            export_custom_elect_source_script_env_vars
+            export_custom_script_env_vars__elect_source
             promote_follower_name=$(custom_elect_new_source_from_replicas)
 
             if [[ -z "$promote_follower_name" ]]; then

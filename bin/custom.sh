@@ -103,7 +103,7 @@ custom_failover_promote_mysql_replica() {
 # echo:
 #   error
 custom_failover_repoint_mysql_replica() {
-    mysql -h"${1}" -P"${2}" -u"${3}" -p"${4}" -v -e "STOP SLAVE; CHANGE REPLICATION SOURCE TO SOURCE_HOST='${5}', SOURCE_PORT=${6}, MASTER_AUTO_POSITION=1; START SLAVE;" >"$TEMP_DIR/custom_failover_repoint_mysql_replica.out.log" 2>"$TEMP_DIR/custom_failover_repoint_mysql_replica.err.log"
+    mysql -h"${1}" -P"${2}" -u"${3}" -p"${4}" -v -e "stop slave; change replication source to source_host='${5}', source_port=${6}, master_auto_position=1; start slave;" >"$TEMP_DIR/custom_failover_repoint_mysql_replica.out.log" 2>"$TEMP_DIR/custom_failover_repoint_mysql_replica.err.log"
 }
 
 # envs:
