@@ -122,15 +122,15 @@ follower_replica__push_replica_status_running() {
     redis_set hset "mha:replica:status:logpos" "${GLB_FOLLOWER_NAME}" "${exec_master_log_pos}"
     redis_set hset "mha:replica:status:ts" "${GLB_FOLLOWER_NAME}" "$(date '+%s')"
 
-    log_stdout "push status complate."
     rm -f "$running_file"
+    log_stdout "push status complate."
 }
 
 follower_replica__push_replica_status() {
     local running_file="${TEMP_DIR}/status.${GLB_FOLLOWER_NAME}.running"
 
     if [[ -f "$running_file" ]]; then
-        log_stdout "wait push status."
+        log_stdout "wait push replica status."
         return
     fi
 
