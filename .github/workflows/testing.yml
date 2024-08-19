@@ -46,7 +46,8 @@ jobs:
 
       - name: Init container
         run: bash initContainer.sh
-      - run:
+        
+      - run: |
           ps -ef 
           ss -lnpt
 
