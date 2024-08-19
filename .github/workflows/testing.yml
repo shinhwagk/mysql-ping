@@ -48,6 +48,7 @@ jobs:
         run: bash initContainer.sh
       - run:
           ps -ef 
+          ss -lnpt
 
       - name: Connect to MySQL and run a query
         run: |
