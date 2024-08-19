@@ -1,0 +1,154 @@
+name: Testing Mysqlbinlog Sync
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  testing:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/centos/centos:stream9
+    services:
+      mysql8036_1:
+        image: shinhwagk/mysql:8.0.36
+        env:
+          MYSQL_ROOT_PASSWORD: root_password
+          MYSQL_MYSQLD_ARGS: "--server-id=1000 --log-bin=mysql-bin --binlog-format=ROW --gtid-mode=on --enforce-gtid-consistency=on --binlog-rows-query-log-events=on --binlog-row-image=FULL --max-connections=5000 --innodb-flush-log-at-trx-commit=0 --sync-binlog=0 --binlog-row-metadata=FULL"
+        ports:
+          - 33061:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+      mysql8036_2:
+        image: shinhwagk/mysql:8.0.36
+        env:
+          MYSQL_ROOT_PASSWORD: root_password
+          MYSQL_MYSQLD_ARGS: "--server-id=1001 --log-bin=mysql-bin --binlog-format=ROW --gtid-mode=on --enforce-gtid-consistency=on --binlog-rows-query-log-events=on --binlog-row-image=FULL --max-connections=5000 --innodb-flush-log-at-trx-commit=1 --sync-binlog=1 --binlog-row-metadata=FULL --slave-parallel-workers=1"
+        ports:
+          - 33062:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+      mysql8036_3:
+        image: shinhwagk/mysql:8.0.36
+        env:
+          MYSQL_ROOT_PASSWORD: root_password
+          MYSQL_MYSQLD_ARGS: "--server-id=1001 --log-bin=mysql-bin --binlog-format=ROW --gtid-mode=on --enforce-gtid-consistency=on --binlog-rows-query-log-events=on --binlog-row-image=FULL --max-connections=5000 --innodb-flush-log-at-trx-commit=1 --sync-binlog=1 --binlog-row-metadata=FULL --slave-parallel-workers=1"
+        ports:
+          - 33063:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Init container
+        run: bash scripts/initContainer.centos.sh
+
+      - name: Running testing
+        run: |
+          set -e
+          bash scripts/testing_github.sh
+        env:
+          ARGS_SOURCE_HOST: mysql8036_1
+          ARGS_SOURCE_PORT: 3306
+          ARGS_SOURCE_USER: root
+          ARGS_SOURCE_PASSWORD: root_password
+          ARGS_TARGET_HOST: mysql8036_2
+          ARGS_TARGET_PORT: 3306
+          ARGS_TARGET_USER: root
+          ARGS_TARGET_PASSWORD: root_password
+
+      # - name: Testing mysqlbinlog-statistics.
+      #   run: |
+      #     set -e
+
+      #     pip install -r requirements.txt
+
+      #     cargo build
+
+      #     mysql -h127.0.0.1 -P33061 -uroot -proot_password -e 'create database testdb;'
+      #     sysbench /usr/share/sysbench/oltp_insert.lua --table-size=100000 --tables=10 --threads=100 --time=60 --mysql-db=testdb --mysql-user=root --mysql-host=127.0.0.1 --mysql-port=33061 --mysql-password=root_password --db-driver=mysql prepare
+
+      #     echo "start mysqlbinlog-sync"
+      #     python -u main.py --source-dsn root/root_password@127.0.0.1:33061 --target-dsn root/root_password@127.0.0.1:33062 --mysqlbinlog-stop-never &
+
+      #     # sleep 10
+
+      #     # mysql -uroot -proot_password -h127.0.0.1 -P33061 -e "show master status\G";
+      #     # mysql -uroot -proot_password -h127.0.0.1 -P33062 -e "show master status\G";
+
+      #     cat *.stderr.*.log
+
+      # - name: Tetsting gh-ost
+      #   run: |
+      #     set -e
+
+      #     curl -OLs https://github.com/github/gh-ost/releases/download/v1.1.6/gh-ost-binary-linux-amd64-20231207144046.tar.gz
+      #     tar zxvf gh-ost-binary-linux-amd64-20231207144046.tar.gz
+
+      #     ./gh-ost \
+      #       --max-load=Threads_running=16 \
+      #       --critical-load=Threads_running=32 \
+      #       --chunk-size=1000 \
+      #       --initially-drop-old-table \
+      #       --initially-drop-ghost-table \
+      #       --initially-drop-socket-file \
+      #       --user="root" \
+      #       --password="root_password" \
+      #       --host='127.0.0.1' \
+      #       --port=33061 \
+      #       --database="test" \
+      #       --table="tab1" \
+      #       --verbose \
+      #       --allow-on-master \
+      #       --assume-master-host="127.0.0.1:33061" \
+      #       --aliyun-rds \
+      #       --alter="add column c varchar(100)" \
+      #       --assume-rbr \
+      #       --execute
+
+      # - name: Testing data validation after using mysqlbinlog-statistics.
+      #   run: |
+      #     set -e
+
+      #     pip install mysql-compare
+      #     curl -OLs https://raw.githubusercontent.com/shinhwagk/mysql-compare-tables/main/scripts/dbcompare.py
+
+      #     mkdir mysql-compare
+      #     cd mysql-compare
+      #     python ../dbcompare.py
+
+      #     ls -l ./
+
+      #     find ./ -type f -name '*.err.log' | while read file; do
+      #       cat $file
+      #     done
+
+      #     find ./ -type f -name '*.diff.log' | while read file; do
+      #       cat $file
+      #     done
+      #   env:
+      #     ARGS_SOURCE_DSN: root/root_password@127.0.0.1:33061
+      #     ARGS_TARGET_DSN: root/root_password@127.0.0.1:33062
+      #     ARGS_DATABASES: testdb
+
+      # - name: Testing Gtid after using mysqlbinlog-statistics.
+      #   run: |
+      #     set -e
+
+      #     mysql -h127.0.0.1 -P33061 -uroot -proot_password -e "select @@hostname, @@port, @@server_uuid, @@server_id\G show master status\G"
+
+      #     mysql -h127.0.0.1 -P33062 -uroot -proot_password -e "select @@hostname, @@port, @@server_uuid, @@server_id\G show master status\G"
+
+      #     kill -9 $(ps -ef | grep python | grep main.py -w  | grep -v grep | awk '{print $2}')
+
+      # # - run: |
+      # #     time mysqlbinlog -h127.0.0.1 -P3306 -uroot -proot_password --read-from-remote-server --to-last-log -v mysql-bin.000001 | bash ./binlogentry_statistics.sh >/dev/null
+
+      # #     mysqlbinlog -h127.0.0.1 -P3306 -uroot -proot_password --read-from-remote-server --to-last-log -v mysql-bin.000001 | bash ./binlogentry_statistics.sh | grep -i 'create table '
+
+      # #     [[ $? == 0 ]] && exit 0
+      # #     mysqlbinlog -h127.0.0.1 -P3306 -uroot -proot_password --read-from-remote-server --to-last-log -v mysql-bin.000001 | bash -x ./binlogentry_statistics.sh
