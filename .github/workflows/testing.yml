@@ -46,7 +46,7 @@ jobs:
 
       - name: Init container
         run: bash initContainer.sh
-        
+
       - run: |
           ps -ef 
           ss -lnpt
@@ -54,8 +54,7 @@ jobs:
       - name: Connect to MySQL and run a query
         run: |
           for _ in `seq 1 10`; do
-            # mysqladmin ping -h127.0.0.1 -P33061 -proot_password -uroot
-            mysqladmin ping -hmysql8036_1 -P33061 -proot_password -uroot
+            mysql -h127.0.0.1 -P33061 -proot_password -uroot -e "show databases"
             echo "Waiting for MySQL to be ready..."
             sleep 5
           done
