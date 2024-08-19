@@ -44,6 +44,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+
+
+      - name: Init container
+        run: bash initContainer.sh
+
       - name: Connect to MySQL and run a query
         run: |
           for _ in `seq 1 10`; do
@@ -51,10 +56,6 @@ jobs:
             echo "Waiting for MySQL to be ready..."
             sleep 5
           done
-        shell: bash
-
-      - name: Init container
-        run: bash initContainer.sh
 
       - name: Running testing
         run: |
