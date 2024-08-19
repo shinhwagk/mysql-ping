@@ -44,15 +44,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-
-
       - name: Init container
         run: bash initContainer.sh
 
       - name: Connect to MySQL and run a query
         run: |
           for _ in `seq 1 10`; do
-            mysqladmin ping -h 127.0.0.1 -P 33061 --password=root_password --silent
+            mysqladmin ping -h127.0.0.1 -P33061 -proot_password -uroot
             echo "Waiting for MySQL to be ready..."
             sleep 5
           done
