@@ -46,6 +46,8 @@ jobs:
 
       - name: Init container
         run: bash initContainer.sh
+      - run:
+          ps -ef 
 
       - name: Connect to MySQL and run a query
         run: |
