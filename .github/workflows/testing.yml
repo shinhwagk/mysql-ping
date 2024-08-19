@@ -50,16 +50,7 @@ jobs:
       - name: Running testing
         run: |
           set -e
-          bash scripts/testing_github.sh
-        env:
-          ARGS_SOURCE_HOST: mysql8036_1
-          ARGS_SOURCE_PORT: 3306
-          ARGS_SOURCE_USER: root
-          ARGS_SOURCE_PASSWORD: root_password
-          ARGS_TARGET_HOST: mysql8036_2
-          ARGS_TARGET_PORT: 3306
-          ARGS_TARGET_USER: root
-          ARGS_TARGET_PASSWORD: root_password
+          bash initMysql.sh
 
       # - name: Testing mysqlbinlog-statistics.
       #   run: |
