@@ -43,10 +43,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Connect to MySQL and run a query
         run: |
-          mysql -h 127.0.0.1 -P 33061 -u root --password=root_password -e "SHOW DATABASES;"
+          for _ in `seq 1 10`; do
+            mysqladmin ping -h 127.0.0.1 -P 33061 --password=root_password --silent
+            echo "Waiting for MySQL to be ready..."
+            sleep 5
+          done
         shell: bash
 
       - name: Init container
