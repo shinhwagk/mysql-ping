@@ -1,0 +1,57 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../:/workspace:cached
+    command: sleep infinity
+  redis:
+    image: redis:7.4
+  db1:
+    image: mysql:8.0.36
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+    command:
+      - --server_id=1
+      - --log-bin=mysql-bin
+      - --gtid-mode=on
+      - --enforce-gtid-consistency=on
+      - --binlog-rows-query-log-events=on
+      - --binlog-format=ROW
+      - --binlog-row-image=FULL
+      - --max-connections=3000
+      - --innodb-flush-log-at-trx-commit=1
+      - --sync-binlog=0
+      - --binlog-row-metadata=FULL
+      # - --binlog-order-commits
+  db2:
+    image: mysql:8.0.36
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+    command:
+      - --server_id=2
+      - --log-bin=mysql-bin
+      - --gtid-mode=on
+      - --enforce-gtid-consistency=on
+      - --binlog-rows-query-log-events=on
+      - --binlog-format=ROW
+      - --binlog-row-image=FULL
+      - --max-connections=3000
+      - --innodb-flush-log-at-trx-commit=1
+      - --sync-binlog=1
+  db3:
+    image: mysql:8.0.36
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+    command:
+      - --server_id=3
+      - --log-bin=mysql-bin
+      - --gtid-mode=on
+      - --enforce-gtid-consistency=on
+      - --binlog-rows-query-log-events=on
+      - --binlog-format=ROW
+      - --binlog-row-image=FULL
+      - --max-connections=3000
+      - --innodb-flush-log-at-trx-commit=1
+      - --sync-binlog=1
