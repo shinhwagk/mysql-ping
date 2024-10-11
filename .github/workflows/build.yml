@@ -36,5 +36,5 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/mysql-sync:${{ env.version }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/mysql-ping:${{ env.version }}
           platforms: linux/amd64
