@@ -1,20 +1,13 @@
 import { parseArgs } from "util";
-
 import mysql from 'mysql2/promise';
-
-import { getTimestamp, sleep, parseConnectionString, type MysqlDsn } from './mysqlping_lib'
-
-function logger(message: string): void {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${message}`);
-}
+import { getTimestamp, sleep, parseConnectionString, logger, type MysqlDsn } from './mysqlping_lib'
 
 class MysqlPing {
     private initState = false
     private isPing = false
     private connectionPool: mysql.Pool;
 
-    constructor(private readonly md: MysqlDsn) {
+    constructor(private readonly md: MysqlDsn, private readonly floor: boolean) {
         this.connectionPool = mysql.createPool({
             host: this.md.host,
             port: this.md.port,
@@ -53,6 +46,16 @@ class MysqlPing {
     }
 
     async ping(timestamp: number) {
+        if (this.floor) {
+            logger("start ping use floor.")
+            await this.ping_floor(timestamp)
+        } else {
+            logger("start ping use non-floor.")
+            await this.ping_nonfloor(timestamp)
+        }
+    }
+
+    private async ping_floor(timestamp: number) {
         if (!this.initState) {
             await this.init()
         }
@@ -65,6 +68,16 @@ class MysqlPing {
             connection.release();
         }
     }
+
+    private async ping_nonfloor(timestamp: number) {
+        const connection = await this.connectionPool.getConnection();
+        try {
+            await connection.execute('select 1');
+            logger(`Ping executed for name: ${this.md.name} timestamp: ${timestamp}`);
+        } finally {
+            connection.release();
+        }
+    }
 }
 
 const { values } = parseArgs({
@@ -73,6 +86,7 @@ const { values } = parseArgs({
         "follower-ping": { type: 'string', },
         "source-dsns": { type: 'string' },
         "ping-range": { type: 'string', default: "60" },
+        "ping-floor": { type: 'boolean' },
         "export-port": { type: 'string', default: "3000" }
     },
     strict: true,
@@ -88,9 +102,9 @@ const MP_MysqlPing = new Map<string, MysqlPing>();
 const MP_FOLLOWER_NAME = values["follower-ping"]
 const MP_EXPORT_PORT: number = Number(values["export-port"])
 const MP_PING_RANGE: number = Number(values["ping-range"])
+const MP_PING_FLOOR: boolean = values["ping-floor"] || false;
 const MP_METRICS = new Map<string, number>()
 const MP_METRICS_ERROR = new Map<string, number>()
-
 
 values["source-dsns"]?.split(",")
     .map(d => d.trim())
@@ -98,7 +112,7 @@ values["source-dsns"]?.split(",")
         const dsn = parseConnectionString(fn)
         logger(`Adding MySQL DSN ${dsn.name}`);
 
-        MP_MysqlPing.set(dsn.name, new MysqlPing(dsn))
+        MP_MysqlPing.set(dsn.name, new MysqlPing(dsn, MP_PING_FLOOR))
     })
 
 function http_server() {
@@ -136,15 +150,21 @@ async function main() {
     while (true) {
         const timestamp = getTimestamp()
         for (const md of MP_MysqlPing.values()) {
-
             if (!md.getIsPing()) {
                 md.setIsPing(true);
                 (async () => {
                     const sleepTime = (Math.floor(Math.random() * MP_PING_RANGE) + 1) * 1000;
                     logger(`${md.getName()} sleeping for ${sleepTime} ms`);
                     await sleep(sleepTime)
-                    await md.ping(timestamp).then(() => MP_METRICS.set(md.getName(), timestamp)).catch(() => MP_METRICS_ERROR.set(md.getName(), 1))
-                    md.setIsPing(false)
+                    try {
+                        await md.ping(timestamp)
+                        MP_METRICS.set(md.getName(), timestamp)
+                    } catch (error) {
+                        MP_METRICS_ERROR.set(md.getName(), 1);
+                        logger(`${md.getName()} error: ${error}`)
+                    } finally {
+                        md.setIsPing(false);
+                    }
                 })();
             } else {
                 logger(md.getName() + " running")
