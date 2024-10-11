@@ -148,7 +148,6 @@ async function main() {
     }
 
     while (true) {
-        const timestamp = getTimestamp()
         for (const md of MP_MysqlPing.values()) {
             if (!md.getIsPing()) {
                 md.setIsPing(true);
@@ -157,6 +156,7 @@ async function main() {
                     logger(`${md.getName()} sleeping for ${sleepTime} ms`);
                     await sleep(sleepTime)
                     try {
+                        const timestamp = getTimestamp()
                         await md.ping(timestamp)
                         MP_METRICS.set(md.getName(), timestamp)
                     } catch (error) {
