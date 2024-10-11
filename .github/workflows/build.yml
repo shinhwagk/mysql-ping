@@ -16,14 +16,11 @@ jobs:
       - name: Get version
         run: echo "VERSION=$(cat version)" >> $GITHUB_ENV
 
-      - name: Set up Bun
+      - name: Build the application
         run: |
           curl -fsSL https://bun.sh/install | bash -s "bun-v1.1.29"
           export BUN_INSTALL="$HOME/.bun"
           export PATH=$BUN_INSTALL/bin:$PATH
-
-      - name: Build the application
-        run: |
           bun add mysql2
           bun build --compile ./mysqlping.ts --minify --target=bun-linux-x64 --outfile mysqlping
 
