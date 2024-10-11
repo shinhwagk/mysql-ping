@@ -4,4 +4,6 @@ bun run ping.ts --follower-ping fp2 --export-port 3000 --ping-range 60 --source-
 
 bun build --compile ./ping.ts --outfile mysqlping
 
+
+count(mysqlping_error == 0) by(mysql_addr,mysql_name) == 0  or count(time() - mysqlping_timestamp <=60) by(mysql_addr,mysql_name) == 0
 ```
