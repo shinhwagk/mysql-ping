@@ -134,6 +134,8 @@ function http_server() {
                     body += `mysqlping_error{mysql_name="${name}", mysql_addr="${mmp.getAddr()}", follower_name="${MP_FOLLOWER_NAME}"} ${error}\n`
                 }
                 return new Response(body);
+            } else if (req.method === "GET" && url.pathname.startsWith("/ready")) {
+                return new Response();
             }
             return new Response("404!", { status: 404 });
         },
