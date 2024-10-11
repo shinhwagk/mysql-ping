@@ -60,7 +60,7 @@ class MysqlPing {
         const connection = await this.connectionPool.getConnection();
         try {
             await connection.execute('REPLACE INTO mysql_ping.heartbeat(ping_name, ping_timestamp) VALUES (?, ?)', [MP_FOLLOWER_NAME, timestamp]);
-            logger(`Ping inserted for ${this.md.name}`);
+            logger(`Ping inserted for name: ${this.md.name} timestamp: ${timestamp}`);
         } finally {
             connection.release();
         }
@@ -127,11 +127,16 @@ function http_server() {
 }
 
 async function main() {
+    const timestamp = getTimestamp()
+    for (const md of MP_MysqlPing.values()) {
+        MP_METRICS_ERROR.set(md.getName(), 0)
+        MP_METRICS.set(md.getName(), timestamp)
+    }
+
     while (true) {
         const timestamp = getTimestamp()
         for (const md of MP_MysqlPing.values()) {
-            MP_METRICS_ERROR.set(md.getName(), 0)
-            MP_METRICS.set(md.getName(), timestamp)
+
             if (!md.getIsPing()) {
                 md.setIsPing(true);
                 (async () => {
