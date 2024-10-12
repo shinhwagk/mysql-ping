@@ -32,10 +32,10 @@ const MP_PING_RANGE: number = parseInt(pingRange, 10);
 
             const res = await fetch(`http://${fAddr}/ping`, { method: "POST", body: MP_MYSQL_NAME });
             if (res.ok) {
-                const ping_timestamp = parseInt(await res.text());
-                if (getTimestamp() - ping_timestamp <= MP_PING_RANGE) {
-                    console.log("alive")
-                    process.exit(0)
+                const pingTimestamp = parseInt(await res.text(), 10);
+                if (getTimestamp() - pingTimestamp <= MP_PING_RANGE) {
+                    console.log("alive");
+                    process.exit(0);
                 }
             } else {
                 console.error(`Ping to follower ${fAddr} returned non-ok status.`);
@@ -46,6 +46,6 @@ const MP_PING_RANGE: number = parseInt(pingRange, 10);
             process.exit(1)
         }
     }
-    console.log("down")
-    process.exit(0)
+    console.log("down");
+    process.exit(0);
 })();
