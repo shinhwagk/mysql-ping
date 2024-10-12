@@ -25,7 +25,7 @@ const MP_PING_RANGE: number = parseInt(pingRange, 10);
 (async () => {
     for (const fAddr of MP_FOLLOWER_ADDRS) {
         try {
-            const res = await fetch(`http://${fAddr}/ping/${MP_MYSQL_NAME}`);
+            const res = await fetch(`http://${fAddr}/ping`, { method: "POST", body: MP_MYSQL_NAME });
             if (res.ok) {
                 const ping_timestamp = parseInt(await res.text());
                 if (getTimestamp() - ping_timestamp <= MP_PING_RANGE) {

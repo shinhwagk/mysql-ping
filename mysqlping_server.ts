@@ -129,9 +129,9 @@ function http_server() {
                 return new Response(body);
             } else if (req.method === "GET" && url.pathname === "/ready") {
                 return new Response();
-            } else if (req.method === "GET" && url.pathname.startsWith("/ping/")) {
-                const name = url.pathname.substring(6)
-                const mp_timestamp = MP_METRICS.get(name)
+            } else if (req.method === "POST" && url.pathname.startsWith("/ping")) {
+                const mysql_name = await req.text()
+                const mp_timestamp = MP_METRICS.get(mysql_name)
 
                 if (mp_timestamp === undefined) {
                     return new Response(null, { status: 404 })
