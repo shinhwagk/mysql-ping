@@ -80,6 +80,7 @@ const MP_MysqlPing = new Map(values["source-dsns"].split(",").map(dsnStr => {
     logger(`Adding MySQL DSN ${dsn.name}`);
     return [dsn.name, new MysqlPing(dsn, MP_PING_FLOOR)];
 }));
+let MP_READY = false
 
 Bun.serve({
     port: MP_EXPORT_PORT,
@@ -93,7 +94,7 @@ Bun.serve({
             }
             return new Response(body);
         } else if (req.method === "GET" && url.pathname === "/ready") {
-            return new Response();
+            return new Response(null, { status: MP_READY ? 200 : 503 });
         } else if (req.method === "POST" && url.pathname.startsWith("/ping")) {
             const mysql_name = await req.text();
             const mp_timestamp = MP_METRICS.get(mysql_name);
@@ -108,6 +109,8 @@ Bun.serve({
     for (const md of MP_MysqlPing.values()) {
         MP_METRICS.set(md.getName(), timestamp);
     }
+
+    MP_READY = true
 
     while (true) {
         for (const md of MP_MysqlPing.values()) {
