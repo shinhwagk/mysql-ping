@@ -1,5 +1,5 @@
 import { parseArgs } from "util";
-import { getTimestamp, type MysqlPingClient } from './mysqlping_lib'
+import { getTimestamp } from './mysqlping_lib'
 
 const { values } = parseArgs({
     args: Bun.argv,
