@@ -1,4 +1,4 @@
 FROM debian
 WORKDIR /app
-COPY mysqlping .
-ENTRYPOINT ["/app/mysqlping"]
+COPY mysqlping_server .
+ENTRYPOINT ["/app/mysqlping_server"]
