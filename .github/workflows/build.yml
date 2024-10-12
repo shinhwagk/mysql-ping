@@ -23,6 +23,9 @@ jobs:
           export PATH=$BUN_INSTALL/bin:$PATH
           bun add mysql2
           bun build --compile ./mysqlping_server.ts --minify --target=bun-linux-x64 --outfile mysqlping_server
+          bun build --compile ./mysqlping_client.ts --minify --target=bun-linux-x64 --outfile mysqlping_client
+          cp mysqlping_server mysqlping_server-${{ env.VERSION }}
+          cp mysqlping_client mysqlping_client-${{ env.VERSION }}
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -38,3 +41,14 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/mysql-ping:${{ env.VERSION }}
           platforms: linux/amd64
+
+      - name: Create Release and Upload binaries
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            mysqlping_server-${{ env.VERSION }}
+            mysqlping_client-${{ env.VERSION }}
+          tag_name: ${{ env.VERSION }}
+          name: Release ${{ env.VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
