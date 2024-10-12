@@ -27,8 +27,8 @@ const MP_PING_RANGE: number = parseInt(pingRange, 10);
         try {
             const res = await fetch(`http://${fAddr}/ping/${MP_MYSQL_NAME}`);
             if (res.ok) {
-                const pingStatus = (await res.json()) as MysqlPingClient;
-                if (getTimestamp() - pingStatus.timestamp <= MP_PING_RANGE) {
+                const ping_timestamp = parseInt(await res.text());
+                if (getTimestamp() - ping_timestamp <= MP_PING_RANGE) {
                     console.log("alive")
                     process.exit(0)
                 }

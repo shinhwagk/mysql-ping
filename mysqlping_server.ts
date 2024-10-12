@@ -104,7 +104,6 @@ const MP_EXPORT_PORT: number = Number(values["export-port"])
 const MP_PING_RANGE: number = Number(values["ping-range"])
 const MP_PING_FLOOR: boolean = values["ping-floor"] || false;
 const MP_METRICS = new Map<string, number>()
-const MP_METRICS_ERROR = new Map<string, number>()
 
 values["source-dsns"]?.split(",")
     .map(d => d.trim())
@@ -127,33 +126,19 @@ function http_server() {
                     const mmp = MP_MysqlPing.get(name)!
                     body += `mysqlping_timestamp{mysql_name="${name}", mysql_addr="${mmp.getAddr()}", follower_name="${MP_FOLLOWER_NAME}"} ${ts}\n`
                 }
-                body += "# HELP mysqlping_error created gauge\n"
-                body += "# TYPE mysqlping_error gauge\n"
-                for (const [name, error] of MP_METRICS_ERROR.entries()) {
-                    const mmp = MP_MysqlPing.get(name)!
-                    body += `mysqlping_error{mysql_name="${name}", mysql_addr="${mmp.getAddr()}", follower_name="${MP_FOLLOWER_NAME}"} ${error}\n`
-                }
                 return new Response(body);
             } else if (req.method === "GET" && url.pathname === "/ready") {
                 return new Response();
             } else if (req.method === "GET" && url.pathname.startsWith("/ping/")) {
                 const name = url.pathname.substring(6)
                 const mp_timestamp = MP_METRICS.get(name)
-                const mp_error = MP_METRICS_ERROR.get(name)
 
-                if (mp_timestamp === undefined || mp_error === undefined) {
+                if (mp_timestamp === undefined) {
                     return new Response(null, { status: 404 })
                 }
-                const x: MysqlPingClient = {
-                    timestamp: mp_timestamp,
-                    error: mp_error
-                }
-                return new Response(JSON.stringify(x), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                return new Response(mp_timestamp.toString());
             }
-            return new Response("404!", { status: 404 });
+            return new Response(null, { status: 404 });
         },
     })
 }
@@ -161,7 +146,6 @@ function http_server() {
 async function main() {
     const timestamp = getTimestamp()
     for (const md of MP_MysqlPing.values()) {
-        MP_METRICS_ERROR.set(md.getName(), 0)
         MP_METRICS.set(md.getName(), timestamp)
     }
 
@@ -178,7 +162,6 @@ async function main() {
                         await md.ping(timestamp)
                         MP_METRICS.set(md.getName(), timestamp + (getTimestamp() - timestamp))
                     } catch (error) {
-                        MP_METRICS_ERROR.set(md.getName(), 1);
                         logger(`${md.getName()} error: ${error}`)
                     } finally {
                         md.setIsPing(false);
