@@ -30,10 +30,10 @@ class MysqlPing {
     }
 
     async ping(timestamp: number) {
-        if (!this.initState) await this.init();
         const connection = await this.connectionPool.getConnection();
         try {
             if (this.floor) {
+                if (!this.initState) await this.init();
                 logger("start ping use floor.");
                 await connection.execute('REPLACE INTO mysql_ping.heartbeat(ping_name, ping_timestamp) VALUES (?, ?)', [MP_FOLLOWER_NAME, timestamp]);
             } else {
