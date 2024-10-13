@@ -33,7 +33,7 @@ const MP_PING_RANGE: number = parseInt(pingRange, 10);
                 process.exit(2)
             }
 
-            const res = await fetch(`http://${fAddr}/ping`, { method: "POST", body: MP_MYSQL_NAME });
+            const res = await fetch(`http://${fAddr}/ping?name=${MP_MYSQL_NAME}`);
             if (res.ok) {
                 const pingTimestamp = parseInt(await res.text(), 10);
                 if (getTimestamp() - pingTimestamp <= MP_PING_RANGE) {
