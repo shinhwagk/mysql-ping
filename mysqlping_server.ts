@@ -1,6 +1,6 @@
 import { parseArgs } from "util";
 import mysql from 'mysql2/promise';
-import { getTimestamp, sleep, parseConnectionString, logger, type MysqlDsn } from './mysqlping_lib'
+import { getTimestamp, sleep, parseConnectionString, logger, type MysqlDsn } from './mysqlping_lib';
 
 class MysqlPing {
     private initState = false;
@@ -80,37 +80,49 @@ const MP_MysqlPing = new Map(values["source-dsns"].split(",").map(dsnStr => {
     logger(`Adding MySQL DSN ${dsn.name}`);
     return [dsn.name, new MysqlPing(dsn, MP_PING_FLOOR)];
 }));
-let MP_READY = false
+let MP_READY = false;
 
 Bun.serve({
     port: MP_EXPORT_PORT,
     async fetch(req) {
         const url = new URL(req.url);
-        if (req.method === "GET" && url.pathname === "/metrics") {
-            let body = "# HELP mysqlping_timestamp created counter\n# TYPE mysqlping_timestamp counter\n";
-            for (const [name, ts] of MP_METRICS.entries()) {
-                const mmp = MP_MysqlPing.get(name)!;
-                body += `mysqlping_timestamp{mysql_name="${name}", mysql_addr="${mmp.getAddr()}", follower_name="${MP_FOLLOWER_NAME}"} ${ts}\n`;
+        if (req.method === "GET") {
+            switch (url.pathname) {
+                case "/ready":
+                    return new Response(null, { status: MP_READY ? 200 : 503 });
+                case "/metrics": {
+                    let body = "# HELP mysqlping_timestamp created counter\n# TYPE mysqlping_timestamp counter\n";
+                    for (const [name, ts] of MP_METRICS.entries()) {
+                        const mmp = MP_MysqlPing.get(name)!;
+                        body += `mysqlping_timestamp{mysql_name="${name}", mysql_addr="${mmp.getAddr()}", follower_name="${MP_FOLLOWER_NAME}"} ${ts}\n`;
+                    }
+                    return new Response(body);
+                }
+                case "/ping": {
+                    const mysql_name = url.searchParams.get("name") || "";
+                    if (MP_METRICS.has(mysql_name)) {
+                        const mp_timestamp = MP_METRICS.get(mysql_name);
+                        return new Response(JSON.stringify({ "range": MP_PING_RANGE, "timestamp": mp_timestamp }),
+                            { headers: { "Content-Type": "application/json" } });
+                    } else {
+                        return new Response(null, { status: 404 });
+                    }
+                }
+                default:
+                    return new Response(null, { status: 404 });
             }
-            return new Response(body);
-        } else if (req.method === "GET" && url.pathname === "/ready") {
-            return new Response(null, { status: MP_READY ? 200 : 503 });
-        } else if (req.method === "POST" && url.pathname.startsWith("/ping")) {
-            const mysql_name = url.searchParams.get("name");
-            const mp_timestamp = mysql_name ? MP_METRICS.get(mysql_name) : null;
-            return new Response(mp_timestamp?.toString() || null, { status: mp_timestamp ? 200 : 404 });
         }
         return new Response(null, { status: 404 });
     },
 });
 
-(async function main() {
+(async () => {
     const timestamp = getTimestamp();
     for (const md of MP_MysqlPing.values()) {
         MP_METRICS.set(md.getName(), timestamp);
     }
 
-    MP_READY = true
+    MP_READY = true;
 
     while (true) {
         for (const md of MP_MysqlPing.values()) {

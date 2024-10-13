@@ -1,5 +1,5 @@
 import { parseArgs } from "util";
-import { getTimestamp } from './mysqlping_lib'
+import { getTimestamp, type MysqlPingClient } from './mysqlping_lib';
 
 const { values } = parseArgs({
     args: Bun.argv,
@@ -18,33 +18,50 @@ if (!followerAddrs || !mysqlName) {
     process.exit(1);
 }
 
-const MP_FOLLOWER_ADDRS: string[] = followerAddrs.split(",").map(fa => fa.trim());
+const MP_FOLLOWER_ADDRS = followerAddrs.split(",").map(fa => fa.trim());
 const MP_MYSQL_NAME = mysqlName;
-const MP_PING_RANGE: number = parseInt(pingRange, 10);
+const MP_PING_RANGE = parseInt(pingRange, 10);
+let MP_FOLLOWER_RANGE;
 
 // exit 2 follower error
 // exit 1 mysql down
 // exit 0 mysql live
-for (const fAddr of MP_FOLLOWER_ADDRS) {
-    try {
-        if (!(await fetch(`http://${fAddr}/ready`)).ok) {
-            console.error(`Follower ${fAddr} not ready.`);
-            process.exit(2)
+try {
+    for (const fAddr of MP_FOLLOWER_ADDRS) {
+        const [readyRes, followerRes] = await Promise.all([
+            fetch(`http://${fAddr}/ready`),
+            fetch(`http://${fAddr}/follower`)
+        ]);
+
+        if (!readyRes.ok) {
+            throw new Error(`Follower ${fAddr} not ready.`);
         }
 
-        const res = await fetch(`http://${fAddr}/ping?name=${MP_MYSQL_NAME}`);
-        if (res.ok) {
-            const pingTimestamp = parseInt(await res.text(), 10);
-            if (getTimestamp() - pingTimestamp <= MP_PING_RANGE) {
-                process.exit(0);
-            }
-        } else {
-            console.error(`Ping to follower ${fAddr} returned non-ok status.`);
-            process.exit(2)
+        if (!followerRes.ok) {
+            throw new Error(`Follower ${fAddr} info not available.`);
         }
-    } catch (error) {
-        console.error(`Error fetching from ${fAddr}: ${error}`);
-        process.exit(2)
+
+        const body = await followerRes.json();
+        if (MP_FOLLOWER_RANGE && MP_FOLLOWER_RANGE !== body.range) {
+            throw new Error(`Follower ${fAddr} range not same.`);
+        } else {
+            MP_FOLLOWER_RANGE = body.range;
+        }
     }
+
+    for (const fAddr of MP_FOLLOWER_ADDRS) {
+        const res = await fetch(`http://${fAddr}/ping?name=${MP_MYSQL_NAME}`);
+        if (!res.ok) {
+            throw new Error(`Ping to follower ${fAddr} returned non-ok status.`);
+        }
+        const mpc = await res.json();
+        if (getTimestamp() - mpc.timestamp <= MP_PING_RANGE) {
+            process.exit(0);
+        }
+    }
+} catch (error) {
+    console.error(`Error: ${error}`);
+    process.exit(2);
 }
+
 process.exit(1);

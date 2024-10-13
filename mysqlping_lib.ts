@@ -28,5 +28,5 @@ export function logger(message: string): void {
 
 export interface MysqlPingClient {
     timestamp: number,
-    error: number
+    range: number
 }
