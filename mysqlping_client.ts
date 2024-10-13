@@ -46,15 +46,15 @@ try {
             throw new Error(`Follower ${fAddr} info not available.`);
         }
 
-        const body = await followerRes.json();
-        if (MP_FOLLOWER_RANGE && MP_FOLLOWER_RANGE !== body.range) {
+        const followerBody = await followerRes.json();
+        if (MP_FOLLOWER_RANGE && MP_FOLLOWER_RANGE !== followerBody.range) {
             throw new Error(`Follower ${fAddr} range not same.`);
         } else {
-            MP_FOLLOWER_RANGE = body.range;
+            MP_FOLLOWER_RANGE = followerBody.range;
         }
 
-        const mysqlList = await listRes.json() as string[]
-        if (!mysqlList.includes(MP_MYSQL_NAME)) {
+        const listBody = await listRes.json() as string[]
+        if (!listBody.includes(MP_MYSQL_NAME)) {
             throw new Error(`Follower ${fAddr} range not same.`);
         }
     }
