@@ -97,7 +97,7 @@ Bun.serve({
             return new Response(null, { status: MP_READY ? 200 : 503 });
         } else if (req.method === "POST" && url.pathname.startsWith("/ping")) {
             const mysql_name = url.searchParams.get("name");
-            const mp_timestamp = MP_METRICS.get(mysql_name);
+            const mp_timestamp = mysql_name ? MP_METRICS.get(mysql_name) : null;
             return new Response(mp_timestamp?.toString() || null, { status: mp_timestamp ? 200 : 404 });
         }
         return new Response(null, { status: 404 });

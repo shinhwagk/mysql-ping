@@ -2,7 +2,7 @@
   "dependencies": { "mysql2": "^3.11.3" },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
-    "@types/bun": "^1.1.6",
+    "@types/bun": "^1.1.11",
     "@types/eslint__js": "^8.42.3",
     "@types/node": "^22.7.5",
     "eslint": "^9.9.0",
