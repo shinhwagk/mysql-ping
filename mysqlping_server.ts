@@ -108,6 +108,9 @@ Bun.serve({
                         return new Response(null, { status: 404 });
                     }
                 }
+                case "/list": {
+                    return new Response(JSON.stringify(MP_METRICS.keys()), { headers: { "Content-Type": "application/json" } });
+                }
                 default:
                     return new Response(null, { status: 404 });
             }

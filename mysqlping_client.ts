@@ -28,9 +28,10 @@ let MP_FOLLOWER_RANGE;
 // exit 0 mysql live
 try {
     for (const fAddr of MP_FOLLOWER_ADDRS) {
-        const [readyRes, followerRes] = await Promise.all([
+        const [readyRes, followerRes, listRes] = await Promise.all([
             fetch(`http://${fAddr}/ready`),
-            fetch(`http://${fAddr}/follower`)
+            fetch(`http://${fAddr}/follower`),
+            fetch(`http://${fAddr}/list`)
         ]);
 
         if (!readyRes.ok) {
@@ -41,11 +42,20 @@ try {
             throw new Error(`Follower ${fAddr} info not available.`);
         }
 
+        if (!listRes.ok) {
+            throw new Error(`Follower ${fAddr} info not available.`);
+        }
+
         const body = await followerRes.json();
         if (MP_FOLLOWER_RANGE && MP_FOLLOWER_RANGE !== body.range) {
             throw new Error(`Follower ${fAddr} range not same.`);
         } else {
             MP_FOLLOWER_RANGE = body.range;
+        }
+
+        const mysqlList = await listRes.json() as string[]
+        if (!mysqlList.includes(MP_MYSQL_NAME)) {
+            throw new Error(`Follower ${fAddr} range not same.`);
         }
     }
 
