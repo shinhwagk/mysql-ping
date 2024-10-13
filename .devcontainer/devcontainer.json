@@ -6,10 +6,6 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"timonwong.shellcheck",
-				"pucelle.run-on-save",
-				"ms-python.python",
-				"charliermarsh.ruff",
 				"oven.bun-vscode"
 			]
 		}
