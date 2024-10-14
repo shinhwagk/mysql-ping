@@ -5,7 +5,8 @@ import { getTimestamp as getTimestampMs, sleep, parseMysqlPingArgs, logger } fro
 class MysqlPing {
     private initState = false;
     private connectionPool: mysql.Pool;
-    private isPing = false;
+    private pingWindow = 0;
+    private pingTimestampOk = 0;
 
     constructor(
         private readonly name: string,
@@ -33,34 +34,20 @@ class MysqlPing {
         this.initState = true;
     }
 
-    private async tryPing(ping_timestamp: number, ping_window: number) {
-        logger(`PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${ping_timestamp}, floor:${this.floor}, window:${ping_window}`);
-        while (ping_timestamp + ping_window > getTimestampMs()) {
-            try {
-                if (!this.isPing) {
-                    await this.ping(ping_timestamp);
-                    logger(`PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${ping_timestamp}, floor:${this.floor}, window:${ping_window} ok`);
-                    this.isPing = true;
-                }
-            } catch (err) {
-                logger(`PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${ping_timestamp}, floor:${this.floor}, window:${ping_window}, error:${err}`);
-            }
-            await sleep(1000);
-        }
-        this.isPing = false;
-    }
-
-    private async ping(timestamp: number) {
+    private async ping() {
         let connection;
         try {
             connection = await this.connectionPool.getConnection();
             if (this.floor) {
                 if (!this.initState) await this.initFloor(connection);
-                await connection.execute('REPLACE INTO mysql_ping.heartbeat(ping_name, ping_timestamp) VALUES (?, ?)', [this.name, timestamp]);
+                await connection.execute('REPLACE INTO mysql_ping.heartbeat(ping_name, ping_timestamp) VALUES (?, ?)', [this.name, this.pingTimestamp]);
             } else {
                 await connection.execute('SELECT 1');
             }
-            this.pingTimestamp = timestamp;
+            this.pingTimestampOk = getTimestampMs();
+            logger(`PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${this.pingTimestamp}, floor:${this.floor}, window:${this.pingWindow} timestamp ok:${this.pingTimestampOk}`);
+        } catch (err) {
+            logger(`PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${this.pingTimestamp}, floor:${this.floor}, window:${this.pingWindow}, error:${err}`);
         } finally {
             if (connection) {
                 try {
@@ -69,14 +56,18 @@ class MysqlPing {
                     logger(`PING MYSQL(${this.name}@${this.getAddr()}) error releasing connection: ${releaseErr}`);
                 }
             }
+            // this.isPing = false
         }
     }
 
-    async start() {
-        while (true) {
-            const ping_timestamp = getTimestampMs();
-            const ping_window = (Math.floor(Math.random() * this.pingRange) + 1) * 1000;
-            await this.tryPing(ping_timestamp, ping_window);
+    start() {
+        if (this.pingTimestamp + this.pingWindow < getTimestampMs()) {
+            this.pingTimestamp = getTimestampMs()
+            this.pingWindow = (Math.floor(Math.random() * this.pingRange) + 1) * 1000;
+        }
+
+        if (this.pingTimestampOk < this.pingTimestamp) {
+            this.ping()
         }
     }
 
@@ -141,6 +132,12 @@ Bun.serve({
     },
 });
 
-for (const mmp of MP_MYSQL_PINGS.values()) {
-    mmp.start();
-}
+const main = () => {
+    setInterval(() => {
+        for (const mmp of MP_MYSQL_PINGS.values()) {
+            mmp.start();
+        }
+    }, 1000);
+};
+
+main();
