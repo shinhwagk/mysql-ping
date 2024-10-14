@@ -6,8 +6,9 @@ class MysqlPing {
     private initState = false;
     private isPing = false;
     private connectionPool: mysql.Pool;
+    private pingTimestamp: number;
 
-    constructor(private readonly md: MysqlDsn, private readonly floor: boolean) {
+    constructor(private readonly md: MysqlDsn, private readonly floor: boolean, pingTimestamp: number) {
         this.connectionPool = mysql.createPool({
             host: this.md.host,
             port: this.md.port,
@@ -15,9 +16,10 @@ class MysqlPing {
             password: this.md.password,
             connectionLimit: 2,
         });
+        this.pingTimestamp = pingTimestamp
     }
 
-    async init() {
+    async initFloor() {
         if (this.initState) return;
         const connection = await this.connectionPool.getConnection();
         try {
@@ -33,13 +35,14 @@ class MysqlPing {
         const connection = await this.connectionPool.getConnection();
         try {
             if (this.floor) {
-                if (!this.initState) await this.init();
+                if (!this.initState) await this.initFloor();
                 logger("start ping use floor.");
                 await connection.execute('REPLACE INTO mysql_ping.heartbeat(ping_name, ping_timestamp) VALUES (?, ?)', [MP_FOLLOWER_NAME, timestamp]);
             } else {
                 logger("start ping use non-floor.");
                 await connection.execute('SELECT 1');
             }
+            this.pingTimestamp = timestamp
             logger(`Ping executed for name: ${this.md.name} timestamp: ${timestamp}`);
         } finally {
             connection.release();
@@ -50,6 +53,7 @@ class MysqlPing {
     getAddr() { return `${this.md.host}:${this.md.port}`; }
     getIsPing() { return this.isPing; }
     setIsPing(state: boolean) { this.isPing = state; }
+    getPingTimestamp() { return this.pingTimestamp; }
 }
 
 const { values } = parseArgs({
@@ -74,13 +78,13 @@ const MP_FOLLOWER_NAME = values["follower-ping"];
 const MP_EXPORT_PORT: number = Number(values["export-port"]);
 const MP_PING_RANGE: number = Number(values["ping-range"]);
 const MP_PING_FLOOR: boolean = values["ping-floor"] || false;
-const MP_METRICS = new Map<string, number>();
-const MP_MysqlPing = new Map(values["source-dsns"].split(",").map(dsnStr => {
+// const MP_METRICS = new Map<string, number>();
+const MP_INIT_TIMESTAMP = getTimestamp();
+const MP_MYSQL_INSTS = new Map(values["source-dsns"].split(",").map(dsnStr => {
     const dsn = parseConnectionString(dsnStr.trim());
     logger(`Adding MySQL DSN ${dsn.name}`);
-    return [dsn.name, new MysqlPing(dsn, MP_PING_FLOOR)];
+    return [dsn.name, new MysqlPing(dsn, MP_PING_FLOOR, MP_INIT_TIMESTAMP)];
 }));
-let MP_READY = false;
 
 Bun.serve({
     port: MP_EXPORT_PORT,
@@ -89,30 +93,24 @@ Bun.serve({
         if (req.method === "GET") {
             switch (url.pathname) {
                 case "/ready":
-                    return new Response(null, { status: MP_READY ? 200 : 503 });
+                    return new Response(null, { status: 200 });
                 case "/metrics": {
                     let body = "# HELP mysqlping_timestamp created counter\n# TYPE mysqlping_timestamp counter\n";
-                    for (const [name, ts] of MP_METRICS.entries()) {
-                        const mmp = MP_MysqlPing.get(name)!;
-                        body += `mysqlping_timestamp{mysql_name="${name}", mysql_addr="${mmp.getAddr()}", follower_name="${MP_FOLLOWER_NAME}"} ${ts}\n`;
+                    for (const [name, mmp] of MP_MYSQL_INSTS.entries()) {
+                        body += `mysqlping_timestamp{mysql_name="${name}", mysql_addr="${mmp.getAddr()}", follower_name="${MP_FOLLOWER_NAME}"} ${mmp.getPingTimestamp()}\n`;
                     }
                     return new Response(body);
                 }
                 case "/ping": {
                     const mysql_name = url.searchParams.get("name") || "";
-                    if (MP_METRICS.has(mysql_name)) {
-                        const mp_timestamp = MP_METRICS.get(mysql_name);
-                        return new Response(JSON.stringify({ "range": MP_PING_RANGE, "timestamp": mp_timestamp }),
-                            { headers: { "Content-Type": "application/json" } });
+                    if (MP_MYSQL_INSTS.has(mysql_name)) {
+                        const mmp = MP_MYSQL_INSTS.get(mysql_name)!;
+                        const body: { timestamp: number, range: number } = { "range": MP_PING_RANGE, "timestamp": mmp.getPingTimestamp() }
+                        return new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" } });
                     } else {
                         return new Response(null, { status: 404 });
                     }
                 }
-                case "/list": {
-                    return new Response(JSON.stringify(MP_METRICS.keys()), { headers: { "Content-Type": "application/json" } });
-                }
-                default:
-                    return new Response(null, { status: 404 });
             }
         }
         return new Response(null, { status: 404 });
@@ -120,15 +118,8 @@ Bun.serve({
 });
 
 (async () => {
-    const timestamp = getTimestamp();
-    for (const md of MP_MysqlPing.values()) {
-        MP_METRICS.set(md.getName(), timestamp);
-    }
-
-    MP_READY = true;
-
     while (true) {
-        for (const md of MP_MysqlPing.values()) {
+        for (const md of MP_MYSQL_INSTS.values()) {
             if (!md.getIsPing()) {
                 md.setIsPing(true);
                 (async () => {
@@ -136,7 +127,6 @@ Bun.serve({
                     try {
                         const timestamp = getTimestamp();
                         await md.ping(timestamp);
-                        MP_METRICS.set(md.getName(), getTimestamp());
                     } catch (error) {
                         logger(`${md.getName()} error: ${error}`);
                     } finally {

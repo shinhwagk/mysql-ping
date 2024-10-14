@@ -28,34 +28,12 @@ let MP_FOLLOWER_RANGE;
 // exit 0 mysql live
 try {
     for (const fAddr of MP_FOLLOWER_ADDRS) {
-        const [readyRes, followerRes, listRes] = await Promise.all([
-            fetch(`http://${fAddr}/ready`),
-            fetch(`http://${fAddr}/follower`),
-            fetch(`http://${fAddr}/list`)
+        const [readyRes] = await Promise.all([
+            fetch(`http://${fAddr}/ready`)
         ]);
 
         if (!readyRes.ok) {
             throw new Error(`Follower ${fAddr} not ready.`);
-        }
-
-        if (!followerRes.ok) {
-            throw new Error(`Follower ${fAddr} info not available.`);
-        }
-
-        if (!listRes.ok) {
-            throw new Error(`Follower ${fAddr} info not available.`);
-        }
-
-        const followerBody = await followerRes.json();
-        if (MP_FOLLOWER_RANGE && MP_FOLLOWER_RANGE !== followerBody.range) {
-            throw new Error(`Follower ${fAddr} range not same.`);
-        } else {
-            MP_FOLLOWER_RANGE = followerBody.range;
-        }
-
-        const listBody = await listRes.json() as string[]
-        if (!listBody.includes(MP_MYSQL_NAME)) {
-            throw new Error(`Follower ${fAddr} range not same.`);
         }
     }
 
@@ -64,7 +42,7 @@ try {
         if (!res.ok) {
             throw new Error(`Ping to follower ${fAddr} returned non-ok status.`);
         }
-        const mpc = await res.json();
+        const mpc = await res.json() as { timestamp: number, range: number };
         if (getTimestamp() - mpc.timestamp <= MP_PING_RANGE) {
             process.exit(0);
         }
