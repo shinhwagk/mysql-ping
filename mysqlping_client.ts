@@ -16,20 +16,18 @@ if (!followerAddrs || !mysqlName) {
     process.exit(2);
 }
 
-const MP_FOLLOWER_ADDRS = followerAddrs.split(",").map(fa => fa.trim());
+const MP_FOLLOWER_ADDRS = followerAddrs.split(",").filter(a => a.length >= 1).map(fa => fa.trim());
 const MP_MYSQL_NAME = mysqlName;
 
 // exit 2 follower error
 // exit 1 mysql down
 // exit 0 mysql live
 try {
-    for (const fAddr of MP_FOLLOWER_ADDRS) {
-        const readyRes = await fetch(`http://${fAddr}/ready`);
-
-        if (!readyRes.ok) {
+    await Promise.all(MP_FOLLOWER_ADDRS.map(async (fAddr) => {
+        if (!(await fetch(`http://${fAddr}/ready`)).ok) {
             throw new Error(`Follower ${fAddr} not ready`);
         }
-    }
+    }));
 
     for (const fAddr of MP_FOLLOWER_ADDRS) {
         const res = await fetch(`http://${fAddr}/ping?name=${MP_MYSQL_NAME}`);
