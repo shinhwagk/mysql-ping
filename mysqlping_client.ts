@@ -41,8 +41,7 @@ try {
         }
 
         const mpc = await res.json() as { timestamp: number, range: number };
-        console.log(getTimestamp() - mpc.timestamp, mpc.range)
-        if (mpc.timestamp + mpc.range >= getTimestamp()) {
+        if (getTimestamp() - mpc.timestamp <= mpc.range) {
             process.exit(0);
         }
     }
