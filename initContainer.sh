@@ -12,6 +12,6 @@ dnf install -y mysql-community-client-8.0.36
 
 if ! command -v bun >/dev/null 2>&1; then
     curl -fsSL https://bun.sh/install | bash -s "bun-v1.1.29"
-    export BUN_INSTALL="$HOME/.bun"
-    export PATH=$BUN_INSTALL/bin:$PATH
+    echo 'export BUN_INSTALL="$HOME/.bun"' >> /root/.bash_profile 
+    echo 'export PATH=$BUN_INSTALL/bin:$PATH' >> /root/.bash_profile 
 fi

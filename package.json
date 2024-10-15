@@ -10,7 +10,7 @@
     "eslint": "^9.9.0",
     "typescript-eslint": "^8.2.0"
   },
-  "name": "mysql-ha",
+  "name": "mysql-ping",
   "module": "index.ts",
   "type": "module",
   "scripts": {

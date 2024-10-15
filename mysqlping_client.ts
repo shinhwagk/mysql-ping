@@ -28,14 +28,14 @@ try {
         const readyRes = await fetch(`http://${fAddr}/ready`);
 
         if (!readyRes.ok) {
-            throw new Error(`Follower ${fAddr} not ready.`);
+            throw new Error(`Follower ${fAddr} not ready`);
         }
     }
 
     for (const fAddr of MP_FOLLOWER_ADDRS) {
         const res = await fetch(`http://${fAddr}/ping?name=${MP_MYSQL_NAME}`);
         if (res.status == 404) {
-            throw new Error(`Ping to follower:${fAddr} mysql:${MP_MYSQL_NAME} not exits.`);
+            throw new Error(`Ping to follower:${fAddr} mysql:${MP_MYSQL_NAME} not exits`);
         } else if (!res.ok) {
             throw new Error(`Ping to follower:${fAddr} mysql:${MP_MYSQL_NAME} ${res.status}`);
         }
