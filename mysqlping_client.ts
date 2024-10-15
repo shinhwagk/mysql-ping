@@ -1,5 +1,4 @@
 import { parseArgs } from "util";
-import { getTimestamp } from './mysqlping_lib';
 
 const { values } = parseArgs({
     args: Bun.argv,
