@@ -39,29 +39,17 @@ class MysqlPing {
         this.initState = true;
     }
 
-    private async ping() {
-        let connection;
-        const pingTimestampOk = this.pingTimestamp + this.pingWindow
+    private async ping(pingTimestampOk: number) {
+        const connection = await this.connectionPool.getConnection();
         try {
-            connection = await this.connectionPool.getConnection();
             if (this.floor) {
                 if (!this.initState) await this.initFloor(connection);
                 await connection.execute('REPLACE INTO mysql_ping.heartbeat(ping_follower_name, ping_timestamp) VALUES (?, ?)', [this.fname, pingTimestampOk]);
             } else {
                 await connection.execute('SELECT 1');
             }
-            this.pingTimestampOk = pingTimestampOk;
-            logger(`PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${this.pingTimestamp}, timestamp ok:${this.pingTimestampOk}, floor:${String(this.floor).padEnd(5, ' ')}, window:${this.pingWindow} timestamp ok:${this.pingTimestampOk}`);
-        } catch (err) {
-            logger(`PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${this.pingTimestamp}, timestamp ok:${this.pingTimestampOk}, floor:${String(this.floor).padEnd(5, ' ')}, window:${this.pingWindow}, error:${err}`);
         } finally {
-            if (connection) {
-                try {
-                    connection.release();
-                } catch (releaseErr) {
-                    logger(`PING MYSQL(${this.name}@${this.getAddr()}) error releasing connection: ${releaseErr}`);
-                }
-            }
+            connection.release();
         }
     }
 
@@ -76,7 +64,14 @@ class MysqlPing {
         }
 
         if (this.pingTimestampOk < this.pingTimestamp) {
-            await this.ping()
+            const pingTimestampOk = this.pingTimestamp + this.pingWindow
+            try {
+                await this.ping(pingTimestampOk)
+                this.pingTimestampOk = pingTimestampOk;
+                logger(`PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${this.pingTimestamp}, timestamp ok:${this.pingTimestampOk}, floor:${String(this.floor).padEnd(5, ' ')}, window:${this.pingWindow} timestamp ok:${this.pingTimestampOk}`);
+            } catch (err) {
+                logger(`PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${this.pingTimestamp}, timestamp ok:${this.pingTimestampOk}, floor:${String(this.floor).padEnd(5, ' ')}, window:${this.pingWindow}, error:${err}`);
+            }
         }
         this.pingLock = false
     }
