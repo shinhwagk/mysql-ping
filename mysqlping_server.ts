@@ -65,13 +65,14 @@ class MysqlPing {
     }
 
     start() {
-        if (this.pingTimestamp + this.pingWindow < getTimestampMs()) {
-            this.pingTimestamp = getTimestampMs()
+        const timestampMs = getTimestampMs()
+        if (this.pingTimestamp + this.pingWindow < timestampMs) {
+            this.pingTimestamp = timestampMs;
             this.pingWindow = (Math.floor(Math.random() * this.range) + 1);
         }
 
         if (this.pingTimestampOk < this.pingTimestamp) {
-            this.ping()
+            this.ping();
         }
     }
 
