@@ -68,9 +68,9 @@ class MysqlPing {
             try {
                 await this.ping(pingTimestampOk)
                 this.pingTimestampOk = pingTimestampOk;
-                logger(`PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${this.pingTimestamp}, timestamp ok:${this.pingTimestampOk}, floor:${String(this.floor).padEnd(5, ' ')}, window:${this.pingWindow} timestamp ok:${this.pingTimestampOk}`);
+                logger(`PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${this.pingTimestamp}, timestamp ok:${this.pingTimestampOk}, floor:${String(this.floor).padEnd(5, ' ')}, window:${this.pingWindow.toString().padEnd(14, ' ')}, timestamp ok:${this.pingTimestampOk}`);
             } catch (err) {
-                logger(`PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${this.pingTimestamp}, timestamp ok:${this.pingTimestampOk}, floor:${String(this.floor).padEnd(5, ' ')}, window:${this.pingWindow}, error:${err}`);
+                logger(`PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${this.pingTimestamp}, timestamp ok:${this.pingTimestampOk}, floor:${String(this.floor).padEnd(5, ' ')}, window:${this.pingWindow.toString().padEnd(14, ' ')}, error:${err}`);
             }
         }
         this.pingLock = false
