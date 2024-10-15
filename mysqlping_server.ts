@@ -7,7 +7,8 @@ class MysqlPing {
     private connectionPool: mysql.Pool;
     private pingWindow = 0;
     private pingTimestampOk = 0;
-    private pingTimestamp = 0
+    private pingTimestamp = 0;
+    private pingLock = false;
 
     constructor(
         private readonly fname: string,
@@ -64,15 +65,20 @@ class MysqlPing {
         }
     }
 
-    start() {
+    async start() {
         const timestampMs = getTimestampMs()
         if (this.pingTimestamp + this.pingWindow < timestampMs) {
             this.pingTimestamp = timestampMs;
             this.pingWindow = (Math.floor(Math.random() * this.range) + 1);
         }
 
-        if (this.pingTimestampOk < this.pingTimestamp) {
-            this.ping();
+        if (this.pingTimestampOk < this.pingTimestamp && !this.pingLock) {
+            this.pingLock = true;
+            try {
+                await this.ping()
+            } finally {
+                this.pingLock = false;
+            }
         }
     }
 
