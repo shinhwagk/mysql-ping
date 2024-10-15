@@ -39,7 +39,7 @@ try {
         } else if (res.status == 404) {
             throw new Error(`follower:${fAddr}, mysql:${MP_MYSQL_NAME}, status:${res.status}, not exists`);
         } else if (res.status == 503) {
-            throw new Error(`follower:${fAddr}, mysql:${MP_MYSQL_NAME}, status:${res.status}, down`);
+            console.error(`follower:${fAddr}, mysql:${MP_MYSQL_NAME}, status:${res.status}, down`);
         }
     }
 } catch (error) {
