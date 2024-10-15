@@ -19,6 +19,11 @@ export function parseMysqlPingArgs(argsString: string): MysqlPingArgs {
     };
 
     argsArray.forEach((arg) => {
+        if (arg === "f" || arg === "floor") {
+            args.floor = true;
+            return;
+        }
+
         const [key, value] = arg.split("=");
         if (!value) {
             throw new Error(`Missing value for argument: ${key}`);
@@ -41,13 +46,10 @@ export function parseMysqlPingArgs(argsString: string): MysqlPingArgs {
                 args.password = value; break;
             case "r":
             case "range":
-                args.range = parseInt(value, 10); break;
+                args.range = parseInt(value, 10) * 1000; break; // from s to ms
             // case "t":
             // case "timeout":
             //     args.timeout = parseInt(value, 10); break;
-            case "f":
-            case "floor":
-                args.floor = value === "true"; break;
             default:
                 throw new Error(`Unknown argument: ${key}`);
         }

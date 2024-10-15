@@ -1,6 +1,6 @@
 import { parseArgs } from "util";
 import mysql from 'mysql2/promise';
-import { getTimestamp as getTimestampMs, sleep, parseMysqlPingArgs, logger } from './mysqlping_lib';
+import { getTimestamp as getTimestampMs, parseMysqlPingArgs, logger } from './mysqlping_lib';
 
 class MysqlPing {
     private initState = false;
@@ -9,6 +9,7 @@ class MysqlPing {
     private pingTimestampOk = 0;
 
     constructor(
+        private readonly fname: string,
         private readonly name: string,
         private readonly host: string,
         private readonly port: number,
@@ -30,7 +31,7 @@ class MysqlPing {
     private async initFloor(connection: mysql.PoolConnection) {
         if (this.initState) return;
         await connection.execute('CREATE DATABASE IF NOT EXISTS `mysql_ping`');
-        await connection.execute('CREATE TABLE IF NOT EXISTS `mysql_ping`.`heartbeat` (ping_name VARCHAR(10) PRIMARY KEY, ping_timestamp INT)');
+        await connection.execute('CREATE TABLE IF NOT EXISTS `mysql_ping`.`heartbeat` (ping_follower_name VARCHAR(10) PRIMARY KEY, ping_timestamp BIGINT NOT NULL)');
         this.initState = true;
     }
 
@@ -40,7 +41,7 @@ class MysqlPing {
             connection = await this.connectionPool.getConnection();
             if (this.floor) {
                 if (!this.initState) await this.initFloor(connection);
-                await connection.execute('REPLACE INTO mysql_ping.heartbeat(ping_name, ping_timestamp) VALUES (?, ?)', [this.name, this.pingTimestamp]);
+                await connection.execute('REPLACE INTO mysql_ping.heartbeat(ping_follower_name, ping_timestamp) VALUES (?, ?)', [this.fname, this.pingTimestamp]);
             } else {
                 await connection.execute('SELECT 1');
             }
@@ -56,14 +57,13 @@ class MysqlPing {
                     logger(`PING MYSQL(${this.name}@${this.getAddr()}) error releasing connection: ${releaseErr}`);
                 }
             }
-            // this.isPing = false
         }
     }
 
     start() {
         if (this.pingTimestamp + this.pingWindow < getTimestampMs()) {
             this.pingTimestamp = getTimestampMs()
-            this.pingWindow = (Math.floor(Math.random() * this.pingRange) + 1) * 1000;
+            this.pingWindow = (Math.floor(Math.random() * this.pingRange) + 1);
         }
 
         if (this.pingTimestampOk < this.pingTimestamp) {
@@ -98,7 +98,7 @@ const MP_API_PORT: number = Number(values["port"]);
 
 const MP_MYSQL_PINGS = new Map(values["dsns"].split(";").map(mpArgs => {
     const { name, host, port, user, password, range, floor } = parseMysqlPingArgs(mpArgs);
-    return [name, new MysqlPing(name, host, port, user, password, range, floor, getTimestampMs())];
+    return [name, new MysqlPing(MP_FOLLOWER_NAME, name, host, port, user, password, range, floor, getTimestampMs())];
 }));
 
 Bun.serve({
@@ -132,12 +132,9 @@ Bun.serve({
     },
 });
 
-const main = () => {
-    setInterval(() => {
-        for (const mmp of MP_MYSQL_PINGS.values()) {
-            mmp.start();
-        }
-    }, 1000);
-};
 
-main();
+setInterval(() => {
+    for (const mmp of MP_MYSQL_PINGS.values()) {
+        mmp.start();
+    }
+}, 1000);
