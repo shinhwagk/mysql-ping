@@ -75,7 +75,7 @@ class MysqlPing {
             this.pingWindow = (Math.floor(Math.random() * this.range) + 1);
         }
 
-        if (this.pingTimestampOk < this.pingTimestamp && !this.pingLock) {
+        if (this.pingTimestampOk < this.pingTimestamp) {
             await this.ping()
         }
         this.pingLock = false
