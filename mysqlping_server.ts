@@ -42,13 +42,14 @@ class MysqlPing {
         let connection;
         try {
             connection = await this.connectionPool.getConnection();
+            const pingTimestampOk = getTimestampMs();
             if (this.floor) {
                 if (!this.initState) await this.initFloor(connection);
-                await connection.execute('REPLACE INTO mysql_ping.heartbeat(ping_follower_name, ping_timestamp) VALUES (?, ?)', [this.fname, this.pingTimestamp]);
+                await connection.execute('REPLACE INTO mysql_ping.heartbeat(ping_follower_name, ping_timestamp) VALUES (?, ?)', [this.fname, pingTimestampOk]);
             } else {
                 await connection.execute('SELECT 1');
             }
-            this.pingTimestampOk = getTimestampMs();
+            this.pingTimestampOk = pingTimestampOk;
             logger(`PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${this.pingTimestamp}, floor:${this.floor}, window:${this.pingWindow} timestamp ok:${this.pingTimestampOk}`);
         } catch (err) {
             logger(`PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${this.pingTimestamp}, floor:${this.floor}, window:${this.pingWindow}, error:${err}`);
