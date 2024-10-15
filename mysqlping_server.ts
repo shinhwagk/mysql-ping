@@ -101,7 +101,7 @@ if (!values["name"] || !values["dsns"]) {
 const MP_FOLLOWER_NAME = values["name"];
 const MP_API_PORT: number = Number(values["port"]);
 
-const MP_MYSQL_PINGS = new Map(values["dsns"].split(";").map(mpArgs => {
+const MP_MYSQL_PINGS = new Map(values["dsns"].split(";").filter(a => a.length >= 1).map(mpArgs => {
     const { name, host, port, user, password, range, floor } = parseMysqlPingArgs(mpArgs);
     return [name, new MysqlPing(MP_FOLLOWER_NAME, name, host, port, user, password, range, floor)];
 }));
