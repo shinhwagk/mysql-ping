@@ -66,6 +66,9 @@ class MysqlPing {
     }
 
     async start() {
+        if (this.pingLock) return
+        this.pingLock = true
+
         const timestampMs = getTimestampMs()
         if (this.pingTimestamp + this.pingWindow < timestampMs) {
             this.pingTimestamp = timestampMs;
@@ -73,13 +76,9 @@ class MysqlPing {
         }
 
         if (this.pingTimestampOk < this.pingTimestamp && !this.pingLock) {
-            this.pingLock = true;
-            try {
-                await this.ping()
-            } finally {
-                this.pingLock = false;
-            }
+            await this.ping()
         }
+        this.pingLock = false
     }
 
     getName() { return this.name; }
