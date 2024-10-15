@@ -33,16 +33,13 @@ try {
     }
 
     for (const fAddr of MP_FOLLOWER_ADDRS) {
-        const res = await fetch(`http://${fAddr}/ping?name=${MP_MYSQL_NAME}`);
-        if (res.status == 404) {
-            throw new Error(`Ping to follower:${fAddr} mysql:${MP_MYSQL_NAME} not exits`);
-        } else if (!res.ok) {
-            throw new Error(`Ping to follower:${fAddr} mysql:${MP_MYSQL_NAME} ${res.status}`);
-        }
-
-        const mpc = await res.json() as { timestamp: number, range: number };
-        if (getTimestamp() - mpc.timestamp <= mpc.range) {
+        const res = await fetch(`http://${fAddr}/live?name=${MP_MYSQL_NAME}`);
+        if (res.ok) {
             process.exit(0);
+        } else if (res.status == 404) {
+            throw new Error(`follower:${fAddr}, mysql:${MP_MYSQL_NAME}, status:${res.status}, not exists`);
+        } else if (res.status == 503) {
+            throw new Error(`follower:${fAddr}, mysql:${MP_MYSQL_NAME}, status:${res.status}, down`);
         }
     }
 } catch (error) {

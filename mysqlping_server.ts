@@ -125,8 +125,8 @@ Bun.serve({
                     const mysql_name = url.searchParams.get("name") || "";
                     if (MP_MYSQL_PINGS.has(mysql_name)) {
                         const mmp = MP_MYSQL_PINGS.get(mysql_name)!;
-                        const body: { timestamp: number, range: number } = { "range": mmp.getRange(), "timestamp": mmp.getTimestampOk() };
-                        return new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" } });
+                        const status = getTimestampMs() - mmp.getTimestampOk() <= mmp.getRange() ? 200 : 503
+                        return new Response(null, { status: status })
                     } else {
                         return new Response(null, { status: 404 });
                     }
