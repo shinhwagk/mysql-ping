@@ -24,8 +24,12 @@ const MP_MYSQL_NAME = mysqlName;
 // exit 0 mysql live
 try {
     await Promise.all(MP_FOLLOWER_ADDRS.map(async (fAddr) => {
-        if (!(await fetch(`http://${fAddr}/ready`)).ok) {
-            throw new Error(`Follower ${fAddr} not ready`);
+        try {
+            if (!(await fetch(`http://${fAddr}/ready`)).ok) {
+                throw new Error(`not ready`);
+            }
+        } catch (err) {
+            throw new Error(`follower:${fAddr}, error:${err}`)
         }
     }));
 
