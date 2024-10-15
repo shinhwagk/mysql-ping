@@ -113,7 +113,7 @@ Bun.serve({
         if (req.method === "GET") {
             switch (url.pathname) {
                 case "/ready":
-                    return new Response(null, { status: 200 });
+                    return new Response();
                 case "/metrics": {
                     let body = "# HELP mysqlping_timestamp created counter\n# TYPE mysqlping_timestamp counter\n";
                     for (const [name, mmp] of MP_MYSQL_PINGS.entries()) {
