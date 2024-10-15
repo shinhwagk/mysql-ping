@@ -41,9 +41,9 @@ class MysqlPing {
 
     private async ping() {
         let connection;
+        const pingTimestampOk = this.pingTimestamp + this.pingWindow
         try {
             connection = await this.connectionPool.getConnection();
-            const pingTimestampOk = getTimestampMs();
             if (this.floor) {
                 if (!this.initState) await this.initFloor(connection);
                 await connection.execute('REPLACE INTO mysql_ping.heartbeat(ping_follower_name, ping_timestamp) VALUES (?, ?)', [this.fname, pingTimestampOk]);
