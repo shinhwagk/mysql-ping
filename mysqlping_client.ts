@@ -25,9 +25,7 @@ const MP_MYSQL_NAME = mysqlName;
 // exit 0 mysql live
 try {
     for (const fAddr of MP_FOLLOWER_ADDRS) {
-        const [readyRes] = await Promise.all([
-            fetch(`http://${fAddr}/ready`)
-        ]);
+        const readyRes = await fetch(`http://${fAddr}/ready`);
 
         if (!readyRes.ok) {
             throw new Error(`Follower ${fAddr} not ready.`);
@@ -43,7 +41,7 @@ try {
         }
 
         const mpc = await res.json() as { timestamp: number, range: number };
-        console.log(mpc.timestamp, mpc.range, getTimestamp())
+        console.log(getTimestamp() - mpc.timestamp, mpc.range)
         if (mpc.timestamp + mpc.range >= getTimestamp()) {
             process.exit(0);
         }
