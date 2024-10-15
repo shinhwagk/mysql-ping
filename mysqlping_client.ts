@@ -14,7 +14,7 @@ const { values } = parseArgs({
 const { "follower-addrs": followerAddrs, "mysql-name": mysqlName } = values;
 if (!followerAddrs || !mysqlName) {
     console.error("Missing required arguments: follower-addrs or mysql-name.");
-    process.exit(1);
+    process.exit(2);
 }
 
 const MP_FOLLOWER_ADDRS = followerAddrs.split(",").map(fa => fa.trim());
