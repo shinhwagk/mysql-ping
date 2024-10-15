@@ -16,7 +16,7 @@ class MysqlPing {
         private readonly port: number,
         private readonly user: string,
         private readonly password: string,
-        private readonly pingRange: number,
+        private readonly range: number,
         private readonly floor: boolean,
     ) {
         this.connectionPool = mysql.createPool({
@@ -66,7 +66,7 @@ class MysqlPing {
     start() {
         if (this.pingTimestamp + this.pingWindow < getTimestampMs()) {
             this.pingTimestamp = getTimestampMs()
-            this.pingWindow = (Math.floor(Math.random() * this.pingRange) + 1);
+            this.pingWindow = (Math.floor(Math.random() * this.range) + 1);
         }
 
         if (this.pingTimestampOk < this.pingTimestamp) {
@@ -76,8 +76,8 @@ class MysqlPing {
 
     getName() { return this.name; }
     getAddr() { return `${this.host}:${this.port}`; }
-    getPingTimestampOk() { return this.pingTimestampOk; }
-    getPingRange() { return this.pingRange; }
+    getTimestampOk() { return this.pingTimestampOk; }
+    getRange() { return this.range; }
 }
 
 const { values } = parseArgs({
@@ -115,7 +115,7 @@ Bun.serve({
                 case "/metrics": {
                     let body = "# HELP mysqlping_timestamp created counter\n# TYPE mysqlping_timestamp counter\n";
                     for (const [name, mmp] of MP_MYSQL_PINGS.entries()) {
-                        body += `mysqlping_timestamp{mysql_name="${name}", mysql_addr="${mmp.getAddr()}", follower_name="${MP_FOLLOWER_NAME}"} ${mmp.getPingTimestampOk()}\n`;
+                        body += `mysqlping_timestamp{mysql_name="${name}", mysql_addr="${mmp.getAddr()}", follower_name="${MP_FOLLOWER_NAME}"} ${mmp.getTimestampOk()}\n`;
                     }
                     return new Response(body);
                 }
@@ -123,7 +123,7 @@ Bun.serve({
                     const mysql_name = url.searchParams.get("name") || "";
                     if (MP_MYSQL_PINGS.has(mysql_name)) {
                         const mmp = MP_MYSQL_PINGS.get(mysql_name)!;
-                        const body: { timestamp: number, range: number } = { "range": mmp.getPingRange(), "timestamp": mmp.getPingTimestampOk() };
+                        const body: { timestamp: number, range: number } = { "range": mmp.getRange(), "timestamp": mmp.getTimestampOk() };
                         return new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" } });
                     } else {
                         return new Response(null, { status: 404 });
