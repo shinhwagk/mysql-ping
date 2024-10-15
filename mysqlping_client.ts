@@ -32,7 +32,7 @@ try {
     }
 
     for (const fAddr of MP_FOLLOWER_ADDRS) {
-        const res = await fetch(`http://${fAddr}/live?name=${MP_MYSQL_NAME}`);
+        const res = await fetch(`http://${fAddr}/ping?name=${MP_MYSQL_NAME}`);
         if (res.ok) {
             process.exit(0);
         } else if (res.status == 404) {
