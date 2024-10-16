@@ -1,16 +1,14 @@
-import { parseArgs } from "@std/cli/parse-args";
+import { parseArgs } from 'jsr:@std/cli/parse-args';
 
 const parsedArgs = parseArgs(Deno.args);
 
-const { "addrs": followerAddrs, "name": mysqlName } = parsedArgs;
+const { 'addrs': followerAddrs, 'name': mysqlName } = parsedArgs;
 if (!followerAddrs || !mysqlName) {
-    console.error("Missing required arguments: follower-addrs or mysql-name.");
+    console.error('Missing required arguments: follower-addrs or mysql-name.');
     Deno.exit(2);
 }
 
-const MP_ARGS_FOLLOWER_ADDRS = followerAddrs.split(",").filter((a: string) =>
-    a.length >= 1
-).map((fa: string) => fa.trim());
+const MP_ARGS_FOLLOWER_ADDRS = followerAddrs.split(',').filter((a: string) => a.length >= 1).map((fa: string) => fa.trim());
 const MP_ARGS_MYSQL_NAME = mysqlName;
 
 // exit 2 follower error

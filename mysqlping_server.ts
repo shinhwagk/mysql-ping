@@ -1,6 +1,7 @@
 import { parseArgs } from 'jsr:@std/cli/parse-args';
 
 import mysql from 'npm:mysql2/promise';
+
 import { getTimestampMs, logger, parseMysqlPingArgs } from './mysqlping_lib.ts';
 
 class MysqlPing {
@@ -21,14 +22,7 @@ class MysqlPing {
         private readonly range: number,
         private readonly floor: boolean,
     ) {
-        this.connectionPool = mysql.createPool({
-            host: this.host,
-            port: this.port,
-            user: this.user,
-            password: this.password,
-            connectionLimit: 2,
-        });
-
+        this.connectionPool = mysql.createPool({ host: this.host, port: this.port, user: this.user, password: this.password, connectionLimit: 2 });
         this.pingTimestamp = getTimestampMs();
         this.pingTimestampOk = this.pingTimestamp;
     }
@@ -41,8 +35,9 @@ class MysqlPing {
     }
 
     private async ping(pingTimestampOk: number) {
-        const connection = await this.connectionPool.getConnection();
+        let connection: mysql.PoolConnection | undefined;
         try {
+            connection = await this.connectionPool.getConnection();
             if (this.floor) {
                 if (!this.initState) await this.initFloor(connection);
                 await connection.execute('REPLACE INTO mysql_ping.heartbeat(ping_follower_name, ping_timestamp) VALUES (?, ?)', [this.fname, pingTimestampOk]);
@@ -50,7 +45,9 @@ class MysqlPing {
                 await connection.execute('SELECT 1');
             }
         } finally {
-            connection.release();
+            if (connection) {
+                connection.release();
+            }
         }
     }
 
@@ -98,9 +95,7 @@ const parsedArgs = parseArgs(Deno.args);
 console.log(parsedArgs);
 
 if (!parsedArgs['name'] || !parsedArgs['dsns']) {
-    console.error(
-        'Missing required arguments: name and dsns must be provided.',
-    );
+    console.error('Missing required arguments: name and dsns must be provided.');
     Deno.exit(1);
 }
 
@@ -113,10 +108,7 @@ const MP_MYSQL_PINGS = new Map(
         .filter((a: string) => a.length >= 1)
         .map((mpArgs) => {
             const { name, host, port, user, password, range, floor } = parseMysqlPingArgs(mpArgs);
-            return [
-                name,
-                new MysqlPing(MP_ARGS_FOLLOWER_NAME, name, host, port, user, password, range, floor),
-            ];
+            return [name, new MysqlPing(MP_ARGS_FOLLOWER_NAME, name, host, port, user, password, range, floor)];
         }),
 );
 
