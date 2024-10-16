@@ -79,18 +79,15 @@ class MysqlPing {
                         String(this.floor).padEnd(5, " ")
                     }, window:${this.pingWindow}, timestamp ok:${this.pingTimestampOk}`,
                 );
-                this.pingLock = false;
             } catch (err) {
                 logger(
                     `PING MYSQL(${this.name}@${this.getAddr()}) timestamp:${this.pingTimestamp}, timestamp ok:${this.pingTimestampOk}, floor:${
                         String(this.floor).padEnd(5, " ")
                     }, window:${this.pingWindow}, ${err}`,
                 );
-                setTimeout(() => {
-                    this.pingLock = false;
-                }, 2000);
             }
         }
+        this.pingLock = false;
     }
 
     getName() {
