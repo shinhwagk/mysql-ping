@@ -5,5 +5,36 @@
   "imports": {
     "@std/cli": "jsr:@std/cli@^1.0.6",
     "mysql2": "npm:mysql2@^3.11.3"
+  },
+  "fmt": {
+    "useTabs": true,
+    "lineWidth": 160,
+    "indentWidth": 4,
+    "semiColons": true,
+    "singleQuote": true,
+    "proseWrap": "preserve",
+    "include": [
+      "src/"
+    ],
+    "exclude": [
+      "src/testdata/",
+      "src/fixtures/**/*.ts"
+    ]
+  },
+  "lint": {
+    "include": [
+      "./"
+    ],
+    "rules": {
+      "tags": [
+        "recommended"
+      ],
+      "include": [
+        "ban-untagged-todo"
+      ],
+      "exclude": [
+        "no-unused-vars"
+      ]
+    }
   }
 }

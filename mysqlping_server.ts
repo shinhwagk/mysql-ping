@@ -108,7 +108,7 @@ class MysqlPing {
 }
 
 const parsedArgs = parseArgs(Deno.args);
-console.log(parseArgs);
+console.log(parsedArgs);
 
 if (!parsedArgs["name"] || !parsedArgs["dsns"]) {
     console.error(
@@ -144,6 +144,7 @@ const MP_MYSQL_PINGS = new Map(
         },
     ),
 );
+
 Deno.serve({ port: MP_ARGS_API_PORT }, (req: Request) => {
     const url = new URL(req.url);
     if (req.method === "GET") {
