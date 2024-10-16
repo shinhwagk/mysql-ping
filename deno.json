@@ -1,0 +1,9 @@
+{
+  "tasks": {
+    "dev": "deno run --watch main.ts"
+  },
+  "imports": {
+    "@std/cli": "jsr:@std/cli@^1.0.6",
+    "mysql2": "npm:mysql2@^3.11.3"
+  }
+}

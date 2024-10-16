@@ -1,12 +1,9 @@
 {
   "editor.formatOnSave": true,
   "editor.insertSpaces": true,
-  "runOnSave.statusMessageTimeout": 5000,
-  "runOnSave.commands": [
-    {
-      "match": ".*\\.sh$",
-      "command": ".vscode/bin/shfmt -i 4 -w -d ${file}",
-      "runIn": "backend",
-    }
-  ]
+  "deno.enable": true,
+  "deno.lint": true,
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  }
 }

@@ -10,8 +10,6 @@ dnf install -y mysql-community-client-8.0.36
 
 # dnf install -y python3.12 python3.12-pip
 
-if ! command -v bun >/dev/null 2>&1; then
-    curl -fsSL https://bun.sh/install | bash -s "bun-v1.1.29"
-    echo 'export BUN_INSTALL="$HOME/.bun"' >> /root/.bash_profile 
-    echo 'export PATH=$BUN_INSTALL/bin:$PATH' >> /root/.bash_profile 
+if ! command -v deno >/dev/null 2>&1; then
+  curl -fsSL https://deno.land/install.sh | sh -s v2.0.0 -y
 fi

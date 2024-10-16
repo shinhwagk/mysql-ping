@@ -71,7 +71,7 @@ export function parseMysqlPingArgs(argsString: string): MysqlPingArgs {
     return args as MysqlPingArgs;
 }
 
-export function getTimestamp() {
+export function getTimestampMs() {
     return Math.floor(Date.now())
 }
 

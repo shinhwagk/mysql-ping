@@ -1,12 +1,10 @@
 {
-	"name": "mysql-ha",
-	"dockerComposeFile": "docker-compose.yml",
-	"service": "app",
-	"workspaceFolder": "/workspace",
+	"name": "mysql-ping",
+	"image": "rockylinux:9",
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"oven.bun-vscode"
+				"denoland.vscode-deno"
 			]
 		}
 	}

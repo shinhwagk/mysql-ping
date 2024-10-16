@@ -1,0 +1,21 @@
+#!/usr/bin/env python3.12
+
+import sys
+import os
+
+import mysql.connector
+from mysql.connector import Error
+
+
+def query_mysql_replica_status(host, port, user, password) -> str:
+    try:
+        with mysql.connector.connect(host=host, user=user, port=port, password=password) as conn:
+            with conn.cursor(dictionary=True) as cur:
+                cur.execute("show replica status")
+                return cur.fetchone() 
+    except Error as e:
+        print(f"Error: {e}",file=sys.stderr)
+        sys.exit(1)
+    
+x = query_mysql_replica_status('db2',3306,'root','root_password')
+os.environ.items()
