@@ -36,9 +36,7 @@ class MysqlPing {
     private async initFloor(connection: mysql.PoolConnection) {
         if (this.initState) return;
         await connection.execute('CREATE DATABASE IF NOT EXISTS `mysql_ping`');
-        await connection.execute(
-            'CREATE TABLE IF NOT EXISTS `mysql_ping`.`heartbeat` (ping_follower_name VARCHAR(10) PRIMARY KEY, ping_timestamp BIGINT NOT NULL)',
-        );
+        await connection.execute('CREATE TABLE IF NOT EXISTS `mysql_ping`.`heartbeat` (ping_follower_name VARCHAR(10) PRIMARY KEY, ping_timestamp BIGINT NOT NULL)');
         this.initState = true;
     }
 
