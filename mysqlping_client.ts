@@ -26,19 +26,13 @@ try {
     }));
 
     for (const fAddr of MP_ARGS_FOLLOWER_ADDRS) {
-        const res = await fetch(
-            `http://${fAddr}/ping?name=${MP_ARGS_MYSQL_NAME}`,
-        );
+        const res = await fetch(`http://${fAddr}/ping?name=${MP_ARGS_MYSQL_NAME}`);
         if (res.ok) {
             Deno.exit(0);
         } else if (res.status == 404) {
-            throw new Error(
-                `follower:${fAddr}, mysql:${MP_ARGS_MYSQL_NAME}, status:${res.status}, not exists`,
-            );
+            throw new Error(`follower:${fAddr}, mysql:${MP_ARGS_MYSQL_NAME}, status:${res.status}, not exists`);
         } else if (res.status == 503) {
-            console.error(
-                `follower:${fAddr}, mysql:${MP_ARGS_MYSQL_NAME}, status:${res.status}, down`,
-            );
+            console.error(`follower:${fAddr}, mysql:${MP_ARGS_MYSQL_NAME}, status:${res.status}, down`);
         }
     }
 } catch (error) {
