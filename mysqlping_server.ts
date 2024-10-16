@@ -115,9 +115,7 @@ if (!parsedArgs["name"] || !parsedArgs["dsns"]) {
         "Missing required arguments: name and dsns must be provided.",
     );
     Deno.exit(1);
-} else {
-    console.log(parsedArgs);
-}
+}  
 
 const MP_ARGS_FOLLOWER_NAME: string = parsedArgs["name"];
 const MP_ARGS_API_PORT: number = Number(parsedArgs["port"]);
