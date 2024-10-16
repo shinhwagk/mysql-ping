@@ -8,33 +8,13 @@
   },
   "fmt": {
     "useTabs": true,
-    "lineWidth": 160,
+    "lineWidth": 180,
     "indentWidth": 4,
     "semiColons": true,
     "singleQuote": true,
-    "proseWrap": "preserve",
-    "include": [
-      "src/"
-    ],
-    "exclude": [
-      "src/testdata/",
-      "src/fixtures/**/*.ts"
-    ]
-  },
-  "lint": {
+    "proseWrap": "always",
     "include": [
       "./"
-    ],
-    "rules": {
-      "tags": [
-        "recommended"
-      ],
-      "include": [
-        "ban-untagged-todo"
-      ],
-      "exclude": [
-        "no-unused-vars"
-      ]
-    }
+    ]
   }
 }
