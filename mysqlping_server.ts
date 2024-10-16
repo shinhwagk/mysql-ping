@@ -27,6 +27,10 @@ class MysqlPing {
         this.pingTimestampOk = this.pingTimestamp;
     }
 
+    async end() {
+        await this.connectionPool.end();
+    }
+
     private async initFloor(connection: mysql.PoolConnection) {
         if (this.initState) return;
         await connection.execute('CREATE DATABASE IF NOT EXISTS `mysql_ping`');
@@ -144,18 +148,26 @@ const server = Deno.serve(
     },
 );
 
-const intervalId = setInterval(() => {
-    for (const mmp of MP_MYSQL_PINGS.values()) {
-        mmp.start();
+let closePing = false;
+
+async function pinging() {
+    let pings: Promise<void>[] = [];
+    while (!closePing) {
+        pings = Array.from(MP_MYSQL_PINGS.values()).map((mmp) => mmp.start());
+        await new Promise((res) => setTimeout(res, 1000));
     }
-}, 1000);
+    await Promise.all(pings);
+    await Promise.all(Array.from(MP_MYSQL_PINGS.values()).map((mmp) => mmp.end()));
+    console.log('ping service closed');
+}
+
+pinging();
 
 Deno.addSignalListener('SIGTERM', () => {
     console.log('Received SIGTERM, shutting down gracefully...');
     ac.abort();
     server.finished.then(() => {
-        console.log('Server closed');
-        clearInterval(intervalId);
-        console.log('Shutdown complete.');
+        console.log('http server closed');
+        closePing = true;
     });
 });
