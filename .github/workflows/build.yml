@@ -31,12 +31,18 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/mysql-ping:server-${{ env.VERSION }}
           platforms: linux/amd64
 
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.0.0
+
+      - name: Compile client
+        run: deno compile mysqlping_client.ts
+
       - name: Create Release and Upload binaries
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            mysqlping_server.ts
-            mysqlping_client.ts
+            mysqlping_client
           tag_name: ${{ env.VERSION }}
           name: Release ${{ env.VERSION }}
         env:
