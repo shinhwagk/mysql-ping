@@ -36,7 +36,7 @@ jobs:
           deno-version: v2.0.0
 
       - name: Compile client
-        run: deno compile mysqlping_client.ts
+        run: deno compile --allow-net mysqlping_client.ts -o mysqlping_client
 
       - name: Create Release and Upload binaries
         uses: softprops/action-gh-release@v2
