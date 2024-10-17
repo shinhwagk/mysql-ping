@@ -2,7 +2,89 @@ import { parseArgs } from 'jsr:@std/cli/parse-args';
 
 import mysql from 'npm:mysql2/promise';
 
-import { getTimestampMs, logger, parseMysqlPingArgs } from './mysqlping_lib.ts';
+interface MysqlPingArgs {
+    name: string;
+    host: string;
+    port: number;
+    user: string;
+    password: string;
+    range: number;
+    // timeout: number
+    floor: boolean;
+}
+
+function parseMysqlPingArgs(argsString: string): MysqlPingArgs {
+    const argsArray = argsString.trim().split(',');
+    const args: MysqlPingArgs = { port: 3306, range: 60, floor: false, name: '', host: '', user: '', password: '' };
+
+    argsArray.forEach((arg) => {
+        if (arg === 'f' || arg === 'floor') {
+            args.floor = true;
+            return;
+        }
+
+        const [key, value] = arg.split('=');
+        if (!value) {
+            throw new Error(`Missing value for argument: ${key}`);
+        }
+        switch (key) {
+            case 'n':
+            case 'name':
+                args.name = value;
+                break;
+            case 'h':
+            case 'host':
+                args.host = value;
+                break;
+            case 'P':
+            case 'port':
+                args.port = parseInt(value, 10);
+                break;
+            case 'u':
+            case 'user':
+                args.user = value;
+                break;
+            case 'p':
+            case 'password':
+                args.password = value;
+                break;
+            case 'r':
+            case 'range':
+                args.range = parseInt(value, 10) * 1000;
+                break;
+            // case "t":
+            // case "timeout":
+            //     args.timeout = parseInt(value, 10); break;
+            // from s to ms
+            default:
+                throw new Error(`Unknown argument: ${key}`);
+        }
+    });
+
+    if (args.name === '') {
+        throw new Error('Missing required argument: n (name)');
+    }
+    if (args.host === '') {
+        throw new Error('Missing required argument: h (host)');
+    }
+    if (args.user === '') {
+        throw new Error('Missing required argument: u (user)');
+    }
+    if (args.password === '') {
+        throw new Error('Missing required argument: p (password)');
+    }
+
+    return args as MysqlPingArgs;
+}
+
+function getTimestampMs() {
+    return Math.floor(Date.now());
+}
+
+function logger(message: string): void {
+    const timestamp = new Date().toISOString();
+    console.log(`${timestamp} - ${message}`);
+}
 
 class MysqlPing {
     private initState = false;
