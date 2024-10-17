@@ -8,8 +8,8 @@ if (!followerAddrs || !mysqlName) {
     Deno.exit(2);
 }
 
-const MP_ARGS_FOLLOWER_ADDRS = followerAddrs.split(',').filter((a: string) => a.length >= 1).map((fa: string) => fa.trim());
-const MP_ARGS_MYSQL_NAME = mysqlName;
+const MP_ARGS_FOLLOWER_ADDRS: string[] = followerAddrs.split(',').filter((a: string) => a.length >= 1).map((fa: string) => fa.trim());
+const MP_ARGS_MYSQL_NAME: string = mysqlName;
 
 // exit 2 follower error
 // exit 1 mysql down
