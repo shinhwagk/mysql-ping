@@ -21,7 +21,7 @@ try {
                 throw new Error(`not ready`);
             }
         } catch (err) {
-            throw new Error(`follower:${fAddr}, error:${err}`);
+            throw new Error(`follower:${fAddr}, ${err}`);
         }
     }));
 
@@ -31,13 +31,14 @@ try {
             Deno.exit(0);
         } else if (res.status == 404) {
             throw new Error(`follower:${fAddr}, mysql:${MP_ARGS_MYSQL_NAME}, status:${res.status}, not exists`);
-        } else if (res.status == 503) {
+        } else if (res.status == 599) {
             console.error(`follower:${fAddr}, mysql:${MP_ARGS_MYSQL_NAME}, status:${res.status}, down`);
+            Deno.exit(1);
+        } else {
+            throw new Error(`follower:${fAddr}, mysql:${MP_ARGS_MYSQL_NAME}, status:${res.status}, unknown`);
         }
     }
 } catch (error) {
     console.error(`${error}`);
     Deno.exit(2);
 }
-
-Deno.exit(1);
