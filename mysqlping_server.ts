@@ -149,20 +149,6 @@ const server = Deno.serve(
 );
 
 let closePing = false;
-
-async function pinging() {
-    let pings: Promise<void>[] = [];
-    while (!closePing) {
-        pings = Array.from(MP_MYSQL_PINGS.values()).map((mmp) => mmp.start());
-        await new Promise((res) => setTimeout(res, 1000));
-    }
-    await Promise.all(pings);
-    await Promise.all(Array.from(MP_MYSQL_PINGS.values()).map((mmp) => mmp.end()));
-    console.log('ping service closed');
-}
-
-pinging();
-
 Deno.addSignalListener('SIGTERM', () => {
     console.log('Received SIGTERM, shutting down gracefully...');
     ac.abort();
@@ -171,3 +157,12 @@ Deno.addSignalListener('SIGTERM', () => {
         closePing = true;
     });
 });
+
+let pings: Promise<void>[] = [];
+while (!closePing) {
+    pings = Array.from(MP_MYSQL_PINGS.values()).map((mmp) => mmp.start());
+    await new Promise((res) => setTimeout(res, 1000));
+}
+await Promise.all(pings);
+await Promise.all(Array.from(MP_MYSQL_PINGS.values()).map((mmp) => mmp.end()));
+console.log('ping service closed');
