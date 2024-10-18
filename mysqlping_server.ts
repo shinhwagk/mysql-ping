@@ -87,7 +87,6 @@ function logger(message: string): void {
 }
 
 class MysqlPing {
-    private initState = false;
     private connectionPool: mysql.Pool;
     private pingWindow = 0;
     private pingTimestampOk = 0;
@@ -113,19 +112,11 @@ class MysqlPing {
         await this.connectionPool.end();
     }
 
-    private async initFloor(connection: mysql.PoolConnection) {
-        if (this.initState) return;
-        await connection.execute('CREATE DATABASE IF NOT EXISTS `mysql_ping`');
-        await connection.execute('CREATE TABLE IF NOT EXISTS `mysql_ping`.`heartbeat` (ping_follower_name VARCHAR(10) PRIMARY KEY, ping_timestamp BIGINT NOT NULL)');
-        this.initState = true;
-    }
-
     private async ping(pingTimestampOk: number) {
         let connection: mysql.PoolConnection | undefined;
         try {
             connection = await this.connectionPool.getConnection();
             if (this.floor) {
-                if (!this.initState) await this.initFloor(connection);
                 await connection.execute('REPLACE INTO mysql_ping.heartbeat(ping_follower_name, ping_timestamp) VALUES (?, ?)', [this.fname, pingTimestampOk]);
             } else {
                 await connection.execute('SELECT 1');
