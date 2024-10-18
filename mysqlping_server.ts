@@ -201,30 +201,41 @@ const MP_MYSQL_PINGS = new Map(
 const ac = new AbortController();
 const server = Deno.serve(
     { port: MP_ARGS_API_PORT, signal: ac.signal },
-    (req: Request) => {
+    async (req: Request) => {
         const url = new URL(req.url);
-        if (req.method === 'GET') {
-            switch (url.pathname) {
-                case '/ready':
-                    return new Response();
-                case '/metrics': {
-                    let body = '# HELP mysqlping_timestamp created counter\n# TYPE mysqlping_timestamp counter\n';
-                    for (const [name, mmp] of MP_MYSQL_PINGS.entries()) {
-                        body += `mysqlping_timestamp{mysql_name="${name}", mysql_addr="${mmp.getAddr()}", follower_name="${MP_ARGS_FOLLOWER_NAME}"} ${mmp.getTimestampOk()}\n`;
-                    }
-                    return new Response(body);
-                }
-                case '/ping': {
-                    const mysql_name = url.searchParams.get('name') || '';
-                    if (MP_MYSQL_PINGS.has(mysql_name)) {
-                        const mmp = MP_MYSQL_PINGS.get(mysql_name)!;
-                        const status = getTimestampMs() - mmp.getTimestampOk() <= mmp.getRange() ? 200 : 599;
-                        return new Response(null, { status: status });
-                    } else {
-                        return new Response(null, { status: 404 });
-                    }
-                }
+        if (url.pathname === '/ready' && req.method === 'GET') {
+            return new Response();
+        } else if (url.pathname === '/metrics' && req.method === 'GET') {
+            let body = '# HELP mysqlping_timestamp created counter\n# TYPE mysqlping_timestamp counter\n';
+            for (const [name, mmp] of MP_MYSQL_PINGS.entries()) {
+                body += `mysqlping_timestamp{mysql_name="${name}", mysql_addr="${mmp.getAddr()}", follower_name="${MP_ARGS_FOLLOWER_NAME}"} ${mmp.getTimestampOk()}\n`;
             }
+            return new Response(body);
+        } else if (url.pathname === '/ping' && req.method === 'GET') {
+            const mysql_name = url.searchParams.get('name') || '';
+            if (MP_MYSQL_PINGS.has(mysql_name)) {
+                const mmp = MP_MYSQL_PINGS.get(mysql_name)!;
+                const status = getTimestampMs() - mmp.getTimestampOk() <= mmp.getRange() ? 200 : 599;
+                return new Response(null, { status: status });
+            } else {
+                return new Response(null, { status: 404 });
+            }
+        } else if (url.pathname === '/dsns') {
+            try {
+                if (req.method === 'POST') {
+                    ((await req.json()) as string[]).filter((a: string) => a.length >= 1).forEach((mpArgs) => {
+                        const { name, host, port, user, password, range, floor } = parseMysqlPingArgs(mpArgs);
+                        MP_MYSQL_PINGS.set(name, new MysqlPing(MP_ARGS_FOLLOWER_NAME, name, host, port, user, password, range, floor));
+                    });
+                } else if (req.method === 'DELETE') {
+                    const mysql_pings = Array.from(MP_MYSQL_PINGS.values());
+                    MP_MYSQL_PINGS.clear();
+                    await Promise.all(mysql_pings.map((mp) => mp.end()));
+                }
+            } catch (err) {
+                return new Response(String(err), { status: 500 });
+            }
+            return new Response();
         }
         return new Response(null, { status: 404 });
     },
