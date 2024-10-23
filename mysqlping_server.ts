@@ -103,7 +103,11 @@ class MysqlPing {
         private readonly range: number,
         private readonly floor: boolean,
     ) {
-        this.connectionPool = mysql.createPool({ host: this.host, port: this.port, user: this.user, password: this.password, connectionLimit: 2 });
+        if (floor) {
+            this.connectionPool = mysql.createPool({ host: this.host, port: this.port, user: this.user, password: this.password, database: 'mysql_ping', connectionLimit: 2 });
+        } else {
+            this.connectionPool = mysql.createPool({ host: this.host, port: this.port, user: this.user, password: this.password, connectionLimit: 2 });
+        }
         this.pingTimestamp = getTimestampMs();
         this.pingTimestampOk = this.pingTimestamp;
     }
