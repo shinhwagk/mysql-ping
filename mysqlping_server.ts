@@ -266,6 +266,8 @@ const server = Deno.serve(
                     const mysql_pings = Array.from(MP_MYSQL_PINGS.values());
                     MP_MYSQL_PINGS.clear();
                     await Promise.all(mysql_pings.map((mp) => mp.end()));
+                } else if (req.method === 'GET') {
+                    return new Response(JSON.stringify([...MP_MYSQL_PINGS.keys()]), { headers: { 'content-type': 'application/json' } });
                 }
             } catch (err) {
                 return new Response(String(err), { status: 500 });
