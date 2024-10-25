@@ -113,7 +113,11 @@ class MysqlPing {
     }
 
     async end() {
-        await this.connectionPool.end();
+        try {
+            await this.connectionPool.end();
+        } catch (err) {
+            logger(`PING MYSQL(${this.name}@${this.getAddr()}), ${err}`);
+        }
     }
 
     private async ping(pingTimestampOk: number) {
@@ -161,6 +165,12 @@ class MysqlPing {
     getName() {
         return this.name;
     }
+    getUser() {
+        return this.user;
+    }
+    getPassword() {
+        return this.password;
+    }
     getAddr() {
         return `${this.host}:${this.port}`;
     }
@@ -169,6 +179,9 @@ class MysqlPing {
     }
     getRange() {
         return this.range;
+    }
+    getFloor() {
+        return this.floor;
     }
 }
 
@@ -180,8 +193,8 @@ if (!parsedArgs['name'] || !parsedArgs['dsns']) {
     Deno.exit(1);
 }
 
-const MP_ARGS_FOLLOWER_NAME: string = parsedArgs['name'];
-const MP_ARGS_API_PORT: number = Number(parsedArgs['port']);
+const MP_ARGS_PING_NAME: string = parsedArgs['name'];
+const MP_ARGS_API_PORT: number = Number(parsedArgs['port'] || '3000');
 const MP_ARGS_DSNS: string = parsedArgs['dsns'];
 
 const MP_MYSQL_PINGS = new Map(
@@ -189,7 +202,7 @@ const MP_MYSQL_PINGS = new Map(
         .filter((a: string) => a.length >= 1)
         .map((mpArgs) => {
             const { name, host, port, user, password, range, floor } = parseMysqlPingArgs(mpArgs);
-            return [name, new MysqlPing(MP_ARGS_FOLLOWER_NAME, name, host, port, user, password, range, floor)];
+            return [name, new MysqlPing(MP_ARGS_PING_NAME, name, host, port, user, password, range, floor)];
         }),
 );
 
@@ -203,7 +216,7 @@ const server = Deno.serve(
         } else if (url.pathname === '/metrics' && req.method === 'GET') {
             let body = '# HELP mysqlping_timestamp created counter\n# TYPE mysqlping_timestamp counter\n';
             for (const [name, mmp] of MP_MYSQL_PINGS.entries()) {
-                body += `mysqlping_timestamp{mysql_name="${name}", mysql_addr="${mmp.getAddr()}", follower_name="${MP_ARGS_FOLLOWER_NAME}"} ${mmp.getTimestampOk()}\n`;
+                body += `mysqlping_timestamp{mysql_name="${name}", mysql_addr="${mmp.getAddr()}", ping_name="${MP_ARGS_PING_NAME}"} ${mmp.getTimestampOk()}\n`;
             }
             return new Response(body);
         } else if (url.pathname === '/ping' && req.method === 'GET') {
@@ -218,10 +231,37 @@ const server = Deno.serve(
         } else if (url.pathname === '/dsns') {
             try {
                 if (req.method === 'POST') {
-                    ((await req.json()) as string[]).filter((a: string) => a.length >= 1).forEach((mpArgs) => {
-                        const { name, host, port, user, password, range, floor } = parseMysqlPingArgs(mpArgs);
-                        MP_MYSQL_PINGS.set(name, new MysqlPing(MP_ARGS_FOLLOWER_NAME, name, host, port, user, password, range, floor));
-                    });
+                    const reqJson = await req.json();
+                    const parsedArgs: MysqlPingArgs[] = reqJson.filter((a: string) => a.length >= 1).map(parseMysqlPingArgs);
+
+                    for (const { name, host, port, user, password, range, floor } of parsedArgs) {
+                        if (MP_MYSQL_PINGS.has(name)) {
+                            const mmp = MP_MYSQL_PINGS.get(name)!;
+                            if (
+                                mmp.getAddr() !== `${host}:${port}` ||
+                                mmp.getUser() !== user ||
+                                mmp.getPassword() !== password ||
+                                mmp.getRange() !== range ||
+                                mmp.getFloor() !== floor
+                            ) {
+                                await mmp.end();
+                                MP_MYSQL_PINGS.set(name, new MysqlPing(MP_ARGS_PING_NAME, name, host, port, user, password, range, floor));
+                                console.log(`replace ${name}`);
+                            } else {
+                                console.log(`keep ${name}`);
+                            }
+                        } else {
+                            MP_MYSQL_PINGS.set(name, new MysqlPing(MP_ARGS_PING_NAME, name, host, port, user, password, range, floor));
+                            console.log(`append ${name}`);
+                        }
+                    }
+
+                    for (const name of MP_MYSQL_PINGS.keys()) {
+                        if (!parsedArgs.some((arg) => arg.name === name)) {
+                            MP_MYSQL_PINGS.delete(name);
+                            console.log(`delete ${name}`);
+                        }
+                    }
                 } else if (req.method === 'DELETE') {
                     const mysql_pings = Array.from(MP_MYSQL_PINGS.values());
                     MP_MYSQL_PINGS.clear();
