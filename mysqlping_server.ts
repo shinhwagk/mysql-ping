@@ -231,8 +231,7 @@ const server = Deno.serve(
         } else if (url.pathname === '/dsns') {
             try {
                 if (req.method === 'POST') {
-                    const reqJson = await req.json();
-                    const parsedArgs: MysqlPingArgs[] = reqJson.filter((a: string) => a.length >= 1).map(parseMysqlPingArgs);
+                    const parsedArgs: MysqlPingArgs[] = (await req.json()).filter((a: string) => a.length >= 1).map(parseMysqlPingArgs);
 
                     for (const { name, host, port, user, password, range, floor } of parsedArgs) {
                         if (MP_MYSQL_PINGS.has(name)) {
