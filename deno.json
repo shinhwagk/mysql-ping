@@ -1,20 +1,21 @@
 {
-  "tasks": {
-    "dev": "deno run --watch main.ts"
-  },
-  "imports": {
-    "@std/cli": "jsr:@std/cli@^1.0.6",
-    "mysql2": "npm:mysql2@^3.11.3"
-  },
-  "fmt": {
-    "useTabs": true,
-    "lineWidth": 180,
-    "indentWidth": 4,
-    "semiColons": true,
-    "singleQuote": true,
-    "proseWrap": "always",
-    "include": [
-      "./"
-    ]
-  }
+	"tasks": {
+		"dev": "deno run --watch main.ts"
+	},
+	"imports": {
+		"@std/cli": "jsr:@std/cli@^1.0.6",
+		"@std/encoding": "jsr:@std/encoding@^1.0.5",
+		"mysql2": "npm:mysql2@^3.11.3"
+	},
+	"fmt": {
+		"useTabs": true,
+		"lineWidth": 180,
+		"indentWidth": 4,
+		"semiColons": true,
+		"singleQuote": true,
+		"proseWrap": "always",
+		"include": [
+			"./"
+		]
+	}
 }

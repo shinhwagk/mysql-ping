@@ -3,6 +3,8 @@
   "specifiers": {
     "jsr:@std/cli@*": "1.0.6",
     "jsr:@std/cli@^1.0.6": "1.0.6",
+    "jsr:@std/encoding@*": "1.0.5",
+    "jsr:@std/encoding@^1.0.5": "1.0.5",
     "npm:@types/node@*": "22.5.4",
     "npm:mysql2@*": "3.11.3",
     "npm:mysql2@^3.11.3": "3.11.3"
@@ -10,6 +12,9 @@
   "jsr": {
     "@std/cli@1.0.6": {
       "integrity": "d22d8b38c66c666d7ad1f2a66c5b122da1704f985d3c47f01129f05abb6c5d3d"
+    },
+    "@std/encoding@1.0.5": {
+      "integrity": "ecf363d4fc25bd85bd915ff6733a7e79b67e0e7806334af15f4645c569fefc04"
     }
   },
   "npm": {
@@ -94,6 +99,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@std/cli@^1.0.6",
+      "jsr:@std/encoding@^1.0.5",
       "npm:mysql2@^3.11.3"
     ]
   }
