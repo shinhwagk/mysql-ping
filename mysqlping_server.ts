@@ -207,8 +207,6 @@ const MP_ARGS_PROM_LABELS: Map<string, string> = new Map(
         .filter(([key, value]: [string, string]) => key && value !== undefined),
 );
 
-// const MP_MYSQL_PINGS: Map<string, MysqlPing> = new Map();
-type addr = string;
 type arg = string;
 const MP_MYSQL_PINGS: Map<arg, MysqlPing> = new Map();
 
