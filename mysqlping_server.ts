@@ -204,11 +204,11 @@ const MP_ARGS_PROM_LABELS: Map<string, string> = new Map(
     (parsedArgs['labels'] || '')
         .split(',')
         .map((lv: string) => lv.split('='))
-        .filter(([key, value]: [string, string]) => key && value !== undefined),
+        .filter(([key, value]: [string, string]) => key?.length >= 1 && value?.length >= 1),
 );
 
-type arg = string;
-const MP_MYSQL_PINGS: Map<arg, MysqlPing> = new Map();
+type Arg = string;
+const MP_MYSQL_PINGS: Map<Arg, MysqlPing> = new Map();
 
 const ac = new AbortController();
 const server = Deno.serve(

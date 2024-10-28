@@ -3,6 +3,7 @@
   "editor.insertSpaces": true,
   "deno.enable": true,
   "deno.lint": true,
+  "deno.path": "/root/.deno/bin/deno",
   "[typescript]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
   }
