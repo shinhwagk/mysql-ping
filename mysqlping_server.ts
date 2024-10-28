@@ -198,9 +198,9 @@ if (!parsedArgs['name']) {
     console.error('Missing required arguments: name must be provided.');
     Deno.exit(1);
 }
-const MP_ARGS_PING_NAME = parsedArgs['name'];
-const MP_ARGS_API_PORT: number = Number(parsedArgs['port'] || '3000');
-const MP_ARGS_PROM_LABELS: Map<string, string> = new Map(
+const MPS_ARGS_PING_NAME = parsedArgs['name'];
+const MPS_ARGS_API_PORT: number = Number(parsedArgs['port'] || '3000');
+const MPS_ARGS_PROM_LABELS: Map<string, string> = new Map(
     (parsedArgs['labels'] || '')
         .split(',')
         .map((lv: string) => lv.split('='))
@@ -208,20 +208,20 @@ const MP_ARGS_PROM_LABELS: Map<string, string> = new Map(
 );
 
 type Arg = string;
-const MP_MYSQL_PINGS: Map<Arg, MysqlPing> = new Map();
+const MPS_MYSQL_PINGS: Map<Arg, MysqlPing> = new Map();
 
 const ac = new AbortController();
 const server = Deno.serve(
-    { port: MP_ARGS_API_PORT, signal: ac.signal },
+    { port: MPS_ARGS_API_PORT, signal: ac.signal },
     async (req: Request) => {
         const url = new URL(req.url);
         if (url.pathname === '/ready' && req.method === 'GET') {
             return new Response();
         } else if (url.pathname === '/metrics' && req.method === 'GET') {
             let body = '# HELP mysqlping_timestamp created counter\n# TYPE mysqlping_timestamp counter\n';
-            for (const mmp of MP_MYSQL_PINGS.values()) {
-                let labels = `mysql_addr="${mmp.getAddr()}", ping_name="${MP_ARGS_PING_NAME}"`;
-                for (const [labelName, labelValue] of MP_ARGS_PROM_LABELS.entries()) {
+            for (const mmp of MPS_MYSQL_PINGS.values()) {
+                let labels = `mysql_addr="${mmp.getAddr()}", ping_name="${MPS_ARGS_PING_NAME}"`;
+                for (const [labelName, labelValue] of MPS_ARGS_PROM_LABELS.entries()) {
                     labels += `, ${labelName}="${labelValue}"`;
                 }
                 for (const [labelName, labelValue] of mmp.getLabels().entries()) {
@@ -233,7 +233,7 @@ const server = Deno.serve(
         } else if (url.pathname === '/ping' && req.method === 'GET') {
             const mysql_addr = url.searchParams.get('mysql_addr') || '';
 
-            for (const mp of MP_MYSQL_PINGS.values()) {
+            for (const mp of MPS_MYSQL_PINGS.values()) {
                 if (mp.getAddr() === mysql_addr) {
                     const status = getTimestampMs() - mp.getTimestampOk() <= mp.getRange() ? 200 : 599;
                     return new Response(null, { status: status });
@@ -247,31 +247,31 @@ const server = Deno.serve(
 
                     const ends: Promise<void>[] = [];
 
-                    for (const mp_arg of MP_MYSQL_PINGS.keys()) {
+                    for (const mp_arg of MPS_MYSQL_PINGS.keys()) {
                         if (args.includes(mp_arg)) {
-                            console.log(`keep ${MP_MYSQL_PINGS.get(mp_arg)?.getAddr()}`);
+                            console.log(`keep ${MPS_MYSQL_PINGS.get(mp_arg)?.getAddr()}`);
                         } else {
-                            const end = MP_MYSQL_PINGS.get(mp_arg)?.end();
+                            const end = MPS_MYSQL_PINGS.get(mp_arg)?.end();
                             if (end) {
                                 ends.push(end);
                             }
-                            console.log(`delete ${MP_MYSQL_PINGS.get(mp_arg)?.getAddr()}`);
-                            MP_MYSQL_PINGS.delete(mp_arg);
+                            console.log(`delete ${MPS_MYSQL_PINGS.get(mp_arg)?.getAddr()}`);
+                            MPS_MYSQL_PINGS.delete(mp_arg);
                         }
                     }
 
                     for (const arg of args) {
-                        if (!MP_MYSQL_PINGS.has(arg)) {
+                        if (!MPS_MYSQL_PINGS.has(arg)) {
                             const mpa: MysqlPingArgs = parseMysqlPingArgs(arg);
-                            const mp = new MysqlPing(MP_ARGS_PING_NAME, mpa.host, mpa.port, mpa.user, mpa.password, mpa.range, mpa.floor, mpa.labels);
-                            MP_MYSQL_PINGS.set(arg, mp);
+                            const mp = new MysqlPing(MPS_ARGS_PING_NAME, mpa.host, mpa.port, mpa.user, mpa.password, mpa.range, mpa.floor, mpa.labels);
+                            MPS_MYSQL_PINGS.set(arg, mp);
                             console.log(`append ${mp.getAddr()}`);
                         }
                     }
                     Promise.all(ends).catch(console.log);
                 } else if (req.method === 'GET') {
                     return new Response(
-                        JSON.stringify([...MP_MYSQL_PINGS.keys()].map((id: string) => id.replace(/,p=.+?,/, ',p=******,'))),
+                        JSON.stringify([...MPS_MYSQL_PINGS.keys()].map((id: string) => id.replace(/,p=.+?,/, ',p=******,'))),
                         { headers: { 'content-type': 'application/json' } },
                     );
                 }
@@ -296,9 +296,9 @@ Deno.addSignalListener('SIGTERM', () => {
 
 let pings: Promise<void>[] = [];
 while (!closePing) {
-    pings = [...MP_MYSQL_PINGS.values()].map((mmp) => mmp.start());
+    pings = [...MPS_MYSQL_PINGS.values()].map((mmp) => mmp.start());
     await new Promise((res) => setTimeout(res, 1000));
 }
 await Promise.all(pings);
-await Promise.all(Array.from(MP_MYSQL_PINGS.values()).map((mmp) => mmp.end()));
+await Promise.all(Array.from(MPS_MYSQL_PINGS.values()).map((mmp) => mmp.end()));
 console.log('ping service closed');
