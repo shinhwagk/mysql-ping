@@ -15,18 +15,13 @@ interface MysqlPingArgs {
 
 function parseMysqlPingArgs(argsString: string): MysqlPingArgs {
     const args: MysqlPingArgs = { port: 3306, range: 60, floor: false, host: '', user: '', password: '', labels: new Map() };
-
     const lsMatch = argsString.match(/,ls=(.+)$/);
 
     if (lsMatch) {
-        const lsValue = lsMatch[1];
-        const labels = lsValue.split(',');
-        for (const label of labels) {
+        lsMatch[1].split(',').forEach((label) => {
             const [labelKey, labelValue] = label.split('=');
-            if (labelKey && labelValue) {
-                args.labels.set(labelKey, labelValue);
-            }
-        }
+            if (labelKey && labelValue) args.labels.set(labelKey, labelValue);
+        });
         argsString = argsString.replace(/,ls=.+$/, '');
     }
 
@@ -70,15 +65,7 @@ function parseMysqlPingArgs(argsString: string): MysqlPingArgs {
         }
     });
 
-    if (args.host === '') {
-        throw new Error('Missing required argument: h (host)');
-    }
-    if (args.user === '') {
-        throw new Error('Missing required argument: u (user)');
-    }
-    if (args.password === '') {
-        throw new Error('Missing required argument: p (password)');
-    }
+    if (!args.host || !args.user || !args.password) throw new Error('Missing required arguments: host, user, or password');
 
     return args as MysqlPingArgs;
 }
@@ -88,8 +75,7 @@ function getTimestampMs() {
 }
 
 function logger(message: string): void {
-    const timestamp = new Date().toISOString();
-    console.log(`${timestamp} - ${message}`);
+    console.log(`${new Date().toISOString()} - ${message}`);
 }
 
 class MysqlPing {
@@ -136,9 +122,7 @@ class MysqlPing {
                 await connection.execute('SELECT 1');
             }
         } finally {
-            if (connection) {
-                connection.release();
-            }
+            if (connection) connection.release();
         }
     }
 
@@ -182,9 +166,6 @@ class MysqlPing {
     }
     getRange() {
         return this.range;
-    }
-    getFloor() {
-        return this.floor;
     }
     getLabels() {
         return this.labels;
