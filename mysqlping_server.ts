@@ -212,10 +212,8 @@ const server = Deno.serve(
             }
             return new Response(body);
         } else if (url.pathname === '/ping' && req.method === 'GET') {
-            const mysql_addr = url.searchParams.get('mysql_addr') || '';
-
             for (const mp of MPS_MYSQL_PINGS.values()) {
-                if (mp.getAddr() === mysql_addr) {
+                if (mp.getAddr() === url.searchParams.get('mysql_addr') || '') {
                     const status = getTimestampMs() - mp.getTimestampOk() <= mp.getRange() ? 200 : 599;
                     return new Response(null, { status: status });
                 }
