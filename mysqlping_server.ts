@@ -70,10 +70,6 @@ function parseMysqlPingArgs(argsString: string): MysqlPingArgs {
     return args as MysqlPingArgs;
 }
 
-function getTimestampMs() {
-    return Math.floor(Date.now());
-}
-
 function logger(message: string): void {
     console.log(`${new Date().toISOString()} - ${message}`);
 }
@@ -95,12 +91,15 @@ class MysqlPing {
         private readonly floor: boolean,
         private readonly labels: Map<string, string>,
     ) {
-        if (floor) {
-            this.connectionPool = mysql.createPool({ host: this.host, port: this.port, user: this.user, password: this.password, database: 'mysql_ping', connectionLimit: 2 });
-        } else {
-            this.connectionPool = mysql.createPool({ host: this.host, port: this.port, user: this.user, password: this.password, connectionLimit: 2 });
-        }
-        this.pingTimestamp = getTimestampMs();
+        this.connectionPool = mysql.createPool({
+            host: this.host,
+            port: this.port,
+            user: this.user,
+            password: this.password,
+            database: floor ? 'mysql_ping' : undefined,
+            connectionLimit: 2,
+        });
+        this.pingTimestamp = Date.now();
         this.pingTimestampOk = this.pingTimestamp;
     }
 
@@ -130,7 +129,7 @@ class MysqlPing {
         if (this.pingLock) return;
         this.pingLock = true;
 
-        const timestampMs = getTimestampMs();
+        const timestampMs = Date.now();
         if (this.pingTimestamp + this.pingWindow < timestampMs) {
             this.pingTimestamp = timestampMs;
             this.pingWindow = Math.floor(Math.random() * this.range) + 1;
@@ -214,7 +213,7 @@ const server = Deno.serve(
         } else if (url.pathname === '/ping' && req.method === 'GET') {
             for (const mp of MPS_MYSQL_PINGS.values()) {
                 if (mp.getAddr() === url.searchParams.get('mysql_addr') || '') {
-                    const status = getTimestampMs() - mp.getTimestampOk() <= mp.getRange() ? 200 : 599;
+                    const status = Date.now() - mp.getTimestampOk() <= mp.getRange() ? 200 : 599;
                     return new Response(null, { status: status });
                 }
             }
