@@ -15,8 +15,8 @@ interface MysqlPingArgs {
 
 function parseMysqlPingArgs(argsString: string): MysqlPingArgs {
     const args: MysqlPingArgs = { port: 3306, range: 60, floor: false, host: '', user: '', password: '', labels: new Map() };
-    const lsMatch = argsString.match(/,ls=(.+)$/);
 
+    const lsMatch = argsString.match(/,ls=(.+)$/);
     if (lsMatch) {
         lsMatch[1].split(',').forEach((label) => {
             const [labelKey, labelValue] = label.split('=');
@@ -71,14 +71,14 @@ function parseMysqlPingArgs(argsString: string): MysqlPingArgs {
 }
 
 function logger(message: string): void {
-    console.log(`${new Date().toISOString()} - ${message}`);
+    console.log(`${(new Date()).toISOString().replace('T', ' ').split('.')[0]} - ${message}`);
 }
 
 class MysqlPing {
     private connectionPool: mysql.Pool;
     private pingWindow = 0;
-    private pingTimestampOk = 0;
-    private pingTimestamp = 0;
+    private pingTimestampOk = Date.now();
+    private pingTimestamp = Date.now();
     private pingLock = false;
 
     constructor(
@@ -99,8 +99,6 @@ class MysqlPing {
             database: floor ? 'mysql_ping' : undefined,
             connectionLimit: 2,
         });
-        this.pingTimestamp = Date.now();
-        this.pingTimestampOk = this.pingTimestamp;
     }
 
     async end() {
@@ -125,7 +123,7 @@ class MysqlPing {
         }
     }
 
-    async start() {
+    start() {
         if (this.pingLock) return;
         this.pingLock = true;
 
@@ -137,18 +135,17 @@ class MysqlPing {
 
         if (this.pingTimestampOk < this.pingTimestamp) {
             const pingTimestampOk = this.pingTimestamp + this.pingWindow;
-            const logPrefix = `PING MYSQL(${this.getAddr()}) timestamp:${this.pingTimestamp}, timestamp ok:${this.pingTimestampOk}, floor:${
-                String(this.floor).padEnd(5, ' ')
-            }, window:${this.pingWindow}`;
-            try {
-                await this.ping(pingTimestampOk);
-                this.pingTimestampOk = pingTimestampOk;
-                logger(`${logPrefix}, timestamp ok:${this.pingTimestampOk}`);
-            } catch (err) {
-                logger(`${logPrefix}, ${err}`);
-            }
+
+            this.ping(pingTimestampOk)
+                .then(() => {
+                    this.pingTimestampOk = pingTimestampOk;
+                    logger(`MysqlAddr: ${this.getAddr()}, TimestampOk: ${this.pingTimestampOk}, Window: ${this.pingWindow}`);
+                })
+                .catch((e) => logger(`MysqlAddr: ${this.getAddr()} ${e}`))
+                .finally(() => this.pingLock = false);
+        } else {
+            this.pingLock = false;
         }
-        this.pingLock = false;
     }
 
     getUser() {
@@ -172,10 +169,10 @@ class MysqlPing {
 }
 
 const parsedArgs = parseArgs(Deno.args);
-console.log(parsedArgs);
+logger(`Args: ${JSON.stringify(parsedArgs)}`);
 
 if (!parsedArgs['name']) {
-    console.error('Missing required arguments: name must be provided.');
+    logger('Missing required arguments: name must be provided.');
     Deno.exit(1);
 }
 const MPS_ARGS_PING_NAME = parsedArgs['name'];
@@ -227,13 +224,11 @@ const server = Deno.serve(
 
                     for (const mp_arg of MPS_MYSQL_PINGS.keys()) {
                         if (args.includes(mp_arg)) {
-                            console.log(`keep ${MPS_MYSQL_PINGS.get(mp_arg)?.getAddr()}`);
+                            logger(`PING MYSQL(${MPS_MYSQL_PINGS.get(mp_arg)?.getAddr()}, Update: Keep`);
                         } else {
                             const end = MPS_MYSQL_PINGS.get(mp_arg)?.end();
-                            if (end) {
-                                ends.push(end);
-                            }
-                            console.log(`delete ${MPS_MYSQL_PINGS.get(mp_arg)?.getAddr()}`);
+                            end && ends.push(end);
+                            logger(`PING MYSQL(${MPS_MYSQL_PINGS.get(mp_arg)?.getAddr()}, Update: Delete`);
                             MPS_MYSQL_PINGS.delete(mp_arg);
                         }
                     }
@@ -243,10 +238,10 @@ const server = Deno.serve(
                             const mpa: MysqlPingArgs = parseMysqlPingArgs(arg);
                             const mp = new MysqlPing(MPS_ARGS_PING_NAME, mpa.host, mpa.port, mpa.user, mpa.password, mpa.range, mpa.floor, mpa.labels);
                             MPS_MYSQL_PINGS.set(arg, mp);
-                            console.log(`append ${mp.getAddr()}`);
+                            logger(`PING MYSQL(${mp.getAddr()}, Update: Append`);
                         }
                     }
-                    Promise.all(ends).catch(console.log);
+                    Promise.all(ends).catch((e) => logger(`${String(e)}`));
                 } else if (req.method === 'GET') {
                     return new Response(
                         JSON.stringify([...MPS_MYSQL_PINGS.keys()].map((id: string) => id.replace(/,p=.+?,/, ',p=******,'))),
@@ -264,19 +259,18 @@ const server = Deno.serve(
 
 let closePing = false;
 Deno.addSignalListener('SIGTERM', () => {
-    console.log('Received SIGTERM, shutting down gracefully...');
+    logger('Received SIGTERM, shutting down gracefully...');
     ac.abort();
     server.finished.then(() => {
-        console.log('http server closed');
+        logger('http server closed');
         closePing = true;
     });
 });
 
-let pings: Promise<void>[] = [];
 while (!closePing) {
-    pings = [...MPS_MYSQL_PINGS.values()].map((mmp) => mmp.start());
+    await Promise.all([...MPS_MYSQL_PINGS.values()].map((mmp) => Promise.resolve().then(() => mmp.start())));
     await new Promise((res) => setTimeout(res, 1000));
 }
-await Promise.all(pings);
+
 await Promise.all(Array.from(MPS_MYSQL_PINGS.values()).map((mmp) => mmp.end()));
-console.log('ping service closed');
+logger('mysql ping closed');

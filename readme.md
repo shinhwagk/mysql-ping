@@ -32,5 +32,5 @@ GET  /dsns
 ```sh
 deno run --allow-net --allow-read mysqlping_server.ts --name xxx --port 3000 --labels "ping_idc=aff"
 
-curl -XPOST http://127.0.0.1:3000/dsns -d '["r=60,u=root,p=root_password,h=192.168.161.93,P=33126,ls=mysql_idc=xxx,mysql_name=xx","r=10,u=root,p=root_password,h=192.168.161.93,P=33026"]'
+curl -XPOST http://127.0.0.1:3000/dsns -d '["r=60,u=root,p=root_password,h=192.168.161.93,P=33026,ls=mysql_idc=xxx,mysql_name=xx","r=10,u=root,p=root_password,h=192.168.161.93,P=33027"]'
 ```
