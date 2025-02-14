@@ -8,21 +8,34 @@ if (!MPC_ARGS_PING_ADDRS || !MPC_ARGS_MYSQL_ADDR) {
     Deno.exit(2);
 }
 
-const pingAddrs: string[] = MPC_ARGS_PING_ADDRS.split(',').filter((a: string) => a.length >= 1).map((fa: string) => fa.trim());
+const pingAddrs: string[] = MPC_ARGS_PING_ADDRS.split(',')
+    .filter((a: string) => a.length >= 1)
+    .map((fa: string) => fa.trim());
 
-// exit 2 ping error, exit 1 mysql down, exit 0 mysql live
+interface Output {
+    status: 'unknown' | 'down' | 'alive';
+    message?: string;
+}
+
 for (const pingAddr of pingAddrs) {
     try {
         if (!(await fetch(`http://${pingAddr}/ready`)).ok) throw new Error(`ping-addr: ${pingAddr}, Not ready`);
         const res = await fetch(`http://${pingAddr}/ping?mysql_addr=${MPC_ARGS_MYSQL_ADDR}`);
-        if (res.ok) Deno.exit(0);
-        else if (res.status == 404) throw new Error(`ping-addr:${pingAddr}, mysql-addr: ${MPC_ARGS_MYSQL_ADDR}, status:${res.status}, not exists`);
-        else if (res.status == 599) console.error(`ping-addr:${pingAddr}, mysql-addr: ${MPC_ARGS_MYSQL_ADDR}, status:${res.status}, down`);
-        else throw new Error(`ping-addr:${pingAddr}, mysql-addr: ${MPC_ARGS_MYSQL_ADDR}, status:${res.status}, unknown`);
+        if (res.ok) {
+            console.log(JSON.stringify({ status: 'alive' }));
+            Deno.exit(0);
+        } else if (res.status == 404) {
+            throw new Error(`ping-addr:${pingAddr}, mysql-addr: ${MPC_ARGS_MYSQL_ADDR}, status:${res.status}, not exists`);
+        } else if (res.status == 599) {
+            // No action needed for status 599
+        } else {
+            throw new Error(`ping-addr:${pingAddr}, mysql-addr: ${MPC_ARGS_MYSQL_ADDR}, status:${res.status}, unknown`);
+        }
     } catch (error) {
-        console.error(`${error}`);
-        Deno.exit(2);
+        console.log(JSON.stringify({ status: 'unknown', message: String(error) }));
+        Deno.exit(0);
     }
 }
 
-Deno.exit(1);
+console.log(JSON.stringify({ status: 'down' }));
+Deno.exit(0);

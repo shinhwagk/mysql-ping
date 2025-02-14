@@ -17,4 +17,6 @@ if [[ $MYSQLPING_EXITCODE == 1 ]]; then
   VIP_EXIST=$?
   ip addr add $VIP/24 dev $INTERFACE
   ip addr del $VIP/24 dev $INTERFACE noprefixroute
+  /usr/sbin/arping -q -c 2 -U -I " + interface + " " + vip
+
 fi
